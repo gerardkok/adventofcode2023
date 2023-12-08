@@ -32,7 +32,7 @@ var digitWords = []digitWord{
 }
 
 func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/puzzle02/input")
+	file, err := os.Open("./cmd/day01/input")
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +52,40 @@ func readInput() ([]string, error) {
 	return result, nil
 }
 
+func firstDigit(s string) int {
+	f := func(c rune) bool {
+		return unicode.IsDigit(c)
+	}
+	index := strings.IndexFunc(s, f)
+	if index == -1 {
+		return -1
+	}
+	return int(s[index]) - '0'
+}
+
+func reverse(s string) string {
+	chars := []rune(s)
+	for i, j := 0, len(chars)-1; i < j; i, j = i+1, j-1 {
+		chars[i], chars[j] = chars[j], chars[i]
+	}
+	return string(chars)
+}
+
+func part1(lines []string) int {
+	sum := 0
+	for _, line := range lines {
+		first := firstDigit(line)
+		last := firstDigit(reverse(line))
+		combined := 10*first + last
+		sum += combined
+	}
+	return sum
+}
+
 func firstDigitWord(s string) match {
 	result := match{len(s), len(s)}
 	for _, digitWord := range digitWords {
 		index := strings.Index(s, digitWord.word)
-		//		fmt.Printf("%d, %s\n", index, digitWord.word)
 		if index != -1 && index < result.index {
 			result = match{index, digitWord.value}
 		}
@@ -97,14 +126,13 @@ func lastDigitChar(s string) match {
 	return match{index, int(s[index]) - '0'}
 }
 
-func firstDigit(s string) int {
+func firstDigit2(s string) int {
 	c := firstDigitChar(s)
 	w := firstDigitWord(s)
 	result := c.value
 	if w.index < c.index {
 		result = w.value
 	}
-	//fmt.Printf("c: %+v, d: %+v, result: %d\n", c, w, result)
 	return result
 }
 
@@ -118,19 +146,23 @@ func lastDigit(s string) int {
 	return result
 }
 
+func part2(lines []string) int {
+	sum := 0
+	for _, line := range lines {
+		first := firstDigit2(line)
+		last := lastDigit(line)
+		combined := 10*first + last
+		sum += combined
+	}
+	return sum
+}
+
 func main() {
 	lines, err := readInput()
 	if err != nil {
 		log.Fatalf("can't read input: %v\n", err)
 	}
 
-	sum := 0
-	for _, line := range lines {
-		first := firstDigit(line)
-		last := lastDigit(line)
-		combined := 10*first + last
-		sum += combined
-		//		fmt.Printf("%s, %d%d = %d\n", line, first, last, combined)
-	}
-	fmt.Println(sum)
+	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }

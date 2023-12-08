@@ -17,7 +17,7 @@ type partNumber struct {
 }
 
 func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/puzzle05/input")
+	file, err := os.Open("./cmd/day03/input")
 	if err != nil {
 		return nil, err
 	}
@@ -48,20 +48,14 @@ func makeSchema(input []string) []string {
 }
 
 func surroundedByDots(part partNumber, schema []string) bool {
-	// fmt.Printf("checking part: %+v\n", part)
 	for i := part.left - 1; i < part.right+1; i++ {
-		// fmt.Printf("[%d, %d] = %c\n", part.line-1, i, schema[part.line-1][i])
 		if schema[part.line-1][i] != '.' {
 			return false
 		}
-		// fmt.Printf("[%d, %d] = %c\n", part.line+1, i, schema[part.line+1][i])
 		if schema[part.line+1][i] != '.' {
 			return false
 		}
 	}
-	// fmt.Printf("[%d, %d] = %c\n", part.line, part.left-1, schema[part.line][part.left-1])
-	// fmt.Printf("[%d, %d] = %c\n", part.line, part.right, schema[part.line][part.right])
-	// fmt.Println("---")
 	return schema[part.line][part.left-1] == '.' && schema[part.line][part.right] == '.'
 }
 
@@ -77,12 +71,72 @@ func partNumbers(schema []string) []partNumber {
 			number, _ := strconv.Atoi(line[match[0]:match[1]])
 			part := partNumber{i, match[0], match[1], number}
 			if !surroundedByDots(part, schema) {
-				// fmt.Printf("part %+v not surrounded by dots\n", part)
 				result = append(result, part)
 			}
 		}
 	}
 	return result
+}
+
+func part1(input []string) int {
+	schema := makeSchema(input)
+	partNumbers := partNumbers(schema)
+	sum := 0
+	for _, p := range partNumbers {
+		sum += p.partNumber
+	}
+	return sum
+}
+
+func gear(line, col int) string {
+	return fmt.Sprintf("%d/%d", line, col)
+}
+
+func attachedToGears(part partNumber, schema []string) []string {
+	result := make([]string, 0)
+	for i := part.left - 1; i < part.right+1; i++ {
+		if schema[part.line-1][i] == '*' {
+			result = append(result, gear(part.line-1, i))
+		}
+		if schema[part.line+1][i] == '*' {
+			result = append(result, gear(part.line+1, i))
+		}
+	}
+	if schema[part.line][part.left-1] == '*' {
+		result = append(result, gear(part.line, part.left-1))
+	}
+	if schema[part.line][part.right] == '*' {
+		result = append(result, gear(part.line, part.right))
+	}
+	return result
+}
+
+func gearMap(parts []partNumber, schema []string) map[string][]partNumber {
+	result := make(map[string][]partNumber)
+	for _, part := range parts {
+		gears := attachedToGears(part, schema)
+		for _, gear := range gears {
+			if _, ok := result[gear]; !ok {
+				result[gear] = make([]partNumber, 0)
+			}
+			result[gear] = append(result[gear], part)
+		}
+	}
+	return result
+}
+
+func part2(input []string) int {
+	schema := makeSchema(input)
+	partNumbers := partNumbers(schema)
+	gearMap := gearMap(partNumbers, schema)
+	sum := 0
+	for _, gearList := range gearMap {
+		if len(gearList) == 2 {
+			gear := gearList[0].partNumber * gearList[1].partNumber
+			sum += gear
+		}
+	}
+	return sum
 }
 
 func main() {
@@ -91,14 +145,6 @@ func main() {
 		log.Fatalf("can't read input: %v\n", err)
 	}
 
-	schema := makeSchema(input)
-	// for _, s := range schema {
-	// 	fmt.Println(s)
-	// }
-	partNumbers := partNumbers(schema)
-	sum := 0
-	for _, p := range partNumbers {
-		sum += p.partNumber
-	}
-	fmt.Println(sum)
+	fmt.Println(part1(input))
+	fmt.Println(part2(input))
 }

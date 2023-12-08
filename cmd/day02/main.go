@@ -10,7 +10,7 @@ import (
 )
 
 func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/puzzle03/input")
+	file, err := os.Open("./cmd/day02/input")
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +28,47 @@ func readInput() ([]string, error) {
 	}
 
 	return result, nil
+}
+
+func isGamePossible(game string) bool {
+	rounds := strings.Split(game, "; ")
+	for _, round := range rounds {
+		if !isRoundPossible(round) {
+			return false
+		}
+	}
+	return true
+}
+
+func isRoundPossible(round string) bool {
+	scoreMap := make(map[string]int)
+	scores := strings.Split(round, ", ")
+	for _, s := range scores {
+		cubeScore := strings.Split(s, " ")
+		score, _ := strconv.Atoi(cubeScore[0])
+		color := cubeScore[1]
+		scoreMap[color] += score
+	}
+	return isScoreMapPossible(scoreMap)
+}
+
+func isScoreMapPossible(scoreMap map[string]int) bool {
+	return scoreMap["red"] <= 12 && scoreMap["green"] <= 13 && scoreMap["blue"] <= 14
+}
+
+func part1(lines []string) int {
+	sum := 0
+
+	for i, line := range lines {
+		parts := strings.Split(line, ": ")
+		index := i + 1
+		game := parts[1]
+		if isGamePossible(game) {
+			sum += index
+		}
+	}
+
+	return sum
 }
 
 func power(game string) int {
@@ -64,12 +105,7 @@ func scoreMap(round string) map[string]int {
 	return scoreMap
 }
 
-func main() {
-	lines, err := readInput()
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
-
+func part2(lines []string) int {
 	sum := 0
 
 	for _, line := range lines {
@@ -78,5 +114,16 @@ func main() {
 		power := power(game)
 		sum += power
 	}
-	fmt.Println(sum)
+
+	return sum
+}
+
+func main() {
+	lines, err := readInput()
+	if err != nil {
+		log.Fatalf("can't read input: %v\n", err)
+	}
+
+	fmt.Println(part1(lines))
+	fmt.Println(part2(lines))
 }
