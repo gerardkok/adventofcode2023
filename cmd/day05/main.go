@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var almanacRE = regexp.MustCompile(`(?ms)^seeds: (.*)$\s*^seed-to-soil map:\s*([\d\s]+)$\s*^soil-to-fertilizer map:\s*([\d\s]+)$\s*^fertilizer-to-water map:\s*([\d\s]+)$\s*^water-to-light map:\s*([\d\s]+)$\s*^light-to-temperature map:\s*([\d\s]+)$\s*^temperature-to-humidity map:\s*([\d\s]+)$\s*^humidity-to-location map:\s*([\d\s]+)$`)
@@ -91,6 +92,36 @@ func part2(seeds []int, mappings [][]numberRange) int {
 	return min
 }
 
+func part3(seeds []int, mappings [][]numberRange) int {
+	var wg sync.WaitGroup
+
+	min := math.MaxInt
+	minMtx := &sync.Mutex{}
+
+	wg.Add(len(seeds) / 2)
+
+	for i := 0; i < len(seeds); i += 2 {
+		start := seeds[i]
+		maxSeed := start + seeds[i+1]
+		go func() {
+			defer wg.Done()
+
+			for seed := start; seed < maxSeed; seed++ {
+				loc := findLocation(seed, mappings)
+				if loc < min {
+					minMtx.Lock()
+					min = loc
+					minMtx.Unlock()
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	return min
+}
+
 func main() {
 	input, err := os.ReadFile("./cmd/day05/input")
 	if err != nil {
@@ -99,6 +130,7 @@ func main() {
 
 	seeds, mappings := parseInput(string(input))
 
-	fmt.Println(part1(seeds, mappings))
-	fmt.Println(part2(seeds, mappings))
+	//fmt.Println(part1(seeds, mappings))
+	//fmt.Println(part2(seeds, mappings))
+	fmt.Println(part3(seeds, mappings))
 }
