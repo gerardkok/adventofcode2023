@@ -19,6 +19,7 @@ type numberRange struct {
 }
 
 func makeMapping(s string) []numberRange {
+	// assumes ranges are consecutive
 	ranges := make([]numberRange, 0)
 	scanner := bufio.NewScanner(strings.NewReader(s))
 	starts := make([]int, 0)
@@ -63,82 +64,39 @@ func parseInput(input string) (seeds []int, mappings [][]numberRange) {
 	return seeds, mappings
 }
 
-func findNext(seed int, mapping []numberRange) int {
-	for _, n := range mapping {
-		s := seed - n.source
-		if s >= 0 && s < n.length {
-			return n.destination + s
-		}
-	}
-	return seed
-}
-
-func findLocation(seed int, mappings [][]numberRange) int {
-	result := seed
-	for _, mapping := range mappings {
-		result = findNext(result, mapping)
-	}
-	return result
-}
-
-func part1(seeds []int, mappings [][]numberRange) int {
-	locations := make([]int, len(seeds))
-	for i, seed := range seeds {
-		locations[i] = findLocation(seed, mappings)
-	}
-
-	location := slices.Min(locations)
-	return location
-}
-
-func part2(seeds []int, mappings [][]numberRange) int {
-	min := math.MaxInt
-	for i := 0; i < len(seeds); i += 2 {
-		maxSeed := seeds[i] + seeds[i+1]
-		for j := seeds[i]; j < maxSeed; j++ {
-			location := findLocation(j, mappings)
-			if location < min {
-				min = location
-			}
-		}
-	}
-	return min
-}
-
-func combineMappings(a, b numberRange) numberRange {
-	aStartSource := a.source
-	aEndSource := a.source + a.length
-	aStartDestination := a.destination
-	aEndDestination := a.destination + a.length
-
-	bStartSource := b.source
-	bEndSource := b.source + b.length
-	bStartDestination := b.destination
-	bEndDestination := b.destination + b.length
-
-	if aStartDestination >= bEndSource || aEndDestination <= bStartSource {
+func mergeRanges(a, b numberRange) numberRange {
+	if a.destination >= b.source+b.length || a.destination+a.length <= b.source {
 		// no overlap
 		return numberRange{}
 	}
 
-	cStartSource := aStartSource
-	cStartDestination := bStartDestination
-	if aStartDestination > bStartSource {
-		cStartDestination += (aStartDestination - bStartSource)
-	} else if aStartDestination < bStartSource {
-		cStartSource += (bStartSource - aStartDestination)
+	resultSource := a.source
+	resultDestination := b.destination
+	if a.destination < b.source {
+		resultSource += (b.source - a.destination)
+	} else if a.destination > b.source {
+		resultDestination += (a.destination - b.source)
 	}
 
-	cEndSource := aEndSource
-	cEndDestination := bEndDestination
-	if aEndDestination > bEndSource {
-		cEndSource -= (aEndDestination - bEndSource)
-	} else if aEndDestination < bEndSource {
-		cEndDestination -= (bEndSource - aEndDestination)
+	resultLength := a.source + a.length - resultSource
+	if a.destination+a.length > b.source+b.length {
+		resultLength -= (a.destination + a.length - b.source - b.length)
 	}
 
-	length := cEndDestination - cStartDestination
-	return numberRange{cStartDestination, cStartSource, length}
+	return numberRange{resultDestination, resultSource, resultLength}
+}
+
+func mergeMappings(a, b []numberRange) []numberRange {
+	result := make([]numberRange, 0)
+	for _, m := range a {
+		for _, n := range b {
+			combined := mergeRanges(m, n)
+			if combined.length > 0 {
+				result = append(result, combined)
+			}
+		}
+	}
+	return result
 }
 
 func main() {
@@ -156,33 +114,28 @@ func main() {
 	// fmt.Println(part2(seeds, mappings))
 	seedMappings := make([]numberRange, len(seeds)/2)
 	for i := 0; i < len(seeds); i += 2 {
-		seedMapping := numberRange{seeds[i], seeds[i], seeds[i+1]}
-		seedMappings = append(seedMappings, seedMapping)
+		seedMappings[i/2] = numberRange{seeds[i], seeds[i], seeds[i+1]}
 	}
+
+	// result := seedMappings
+	// for i := range mappings {
+	// 	combinedMappings := make([]numberRange, 0)
+	// 	for _, combinedMapping := range result {
+	// 		for _, m := range mappings[i] {
+	// 			combined := mergeRanges(combinedMapping, m)
+	// 			if combined.length > 0 {
+	// 				combinedMappings = append(combinedMappings, combined)
+	// 			}
+	// 		}
+	// 	}
+	// 	result = combinedMappings
+	// }
 
 	result := seedMappings
-	for i := range mappings {
-		combinedMappings := make([]numberRange, 0)
-		for _, combinedMapping := range result {
-			for _, m := range mappings[i] {
-				combined := combineMappings(combinedMapping, m)
-				if combined.length > 0 {
-					combinedMappings = append(combinedMappings, combined)
-				}
-			}
-		}
-		result = combinedMappings
+	for _, mapping := range mappings {
+		result = mergeMappings(result, mapping)
 	}
 
-	// for _, firstMapping := range mappings[0] {
-	// 	for _, secondMapping := range mappings[1] {
-	// 		combined := combineMappings(firstMapping, secondMapping)
-	// 		if combined.length > 0 {
-	// 			combinedMappings = append(combinedMappings, combined)
-	// 		}
-	// 		//fmt.Printf("first mapping: %v\nsecond mapping: %v\ncombined: %v\n", firstMapping, secondMapping, combined)
-	// 	}
-	// }
 	min := math.MaxInt
 	for _, r := range result {
 		if r.destination < min {
