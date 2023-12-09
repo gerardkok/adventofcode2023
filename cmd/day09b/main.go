@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -11,8 +10,13 @@ import (
 	"strconv"
 	"strings"
 
+	"adventofcode23/internal/day"
 	"adventofcode23/internal/projectpath"
 )
+
+type Puzzle09 struct {
+	day.Day
+}
 
 type command struct {
 	inputFile string
@@ -72,6 +76,20 @@ func (c command) readInput() ([]string, error) {
 	return result, nil
 }
 
+func NewPuzzle09(inputFile string) (Puzzle09, error) {
+	// d, err := day.NewDay(
+	// 	day.WithInputFile(inputFile),
+	// )
+	// if err != nil {
+	// 	return Puzzle09{}, nil
+	// }
+	d := day.Day{
+		InputFile: inputFile,
+	}
+
+	return Puzzle09{d}, nil
+}
+
 func binomialCoefficients(n int) []int {
 	result := make([]int, n+1)
 	result[0] = 1
@@ -114,8 +132,8 @@ func reverse(r []int) []int {
 	return result
 }
 
-func (c command) part1() int {
-	input, _ := c.readInput()
+func (p Puzzle09) Part1() int {
+	input, _ := p.ReadLines()
 	sum := 0
 	for _, line := range input {
 		fields := strings.Fields(line)
@@ -130,8 +148,8 @@ func (c command) part1() int {
 	return sum
 }
 
-func (c command) part2() int {
-	input, _ := c.readInput()
+func (p Puzzle09) Part2() int {
+	input, _ := p.ReadLines()
 	sum := 0
 	for _, line := range input {
 		fields := strings.Fields(line)
@@ -147,13 +165,10 @@ func (c command) part2() int {
 }
 
 func main() {
-	c, err := NewCommand(
-		WithInputFile(filepath.Join(projectpath.Root, "cmd", "day09", "input")),
-	)
+	p, err := NewPuzzle09(filepath.Join(projectpath.Root, "cmd", "day09", "input"))
 	if err != nil {
 		log.Fatalf("can't create command: %v\n", err)
 	}
 
-	fmt.Fprintln(c.output, c.part1())
-	fmt.Fprintln(c.output, c.part2())
+	day.Solve(p)
 }

@@ -7,7 +7,6 @@ import (
 	"math"
 	"os"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -18,28 +17,34 @@ type numberRange struct {
 	destination, source, length int
 }
 
-func makeMapping(s string) []numberRange {
-	// assumes ranges are consecutive
+func parseRange(s string) numberRange {
+	fields := strings.Fields(s)
+	destination, _ := strconv.Atoi(fields[0])
+	source, _ := strconv.Atoi(fields[1])
+	length, _ := strconv.Atoi(fields[2])
+	return numberRange{destination, source, length}
+}
+
+func parseMapping(s string) []numberRange {
+	// assumes ranges are connected
 	ranges := make([]numberRange, 0)
 	scanner := bufio.NewScanner(strings.NewReader(s))
-	starts := make([]int, 0)
-	ends := make([]int, 0)
+	minSource := math.MaxInt
+	maxSource := 0
 	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		destination, _ := strconv.Atoi(fields[0])
-		source, _ := strconv.Atoi(fields[1])
-		starts = append(starts, source)
-		length, _ := strconv.Atoi(fields[2])
-		ends = append(ends, destination+length)
-		r := numberRange{destination, source, length}
+		r := parseRange(scanner.Text())
+		if r.source < minSource {
+			minSource = r.source
+		}
+		if r.destination+r.length > maxSource {
+			maxSource = r.destination + r.length
+		}
 		ranges = append(ranges, r)
 	}
-	minSource := slices.Min(starts)
 	if minSource > 0 {
 		firstRange := numberRange{0, 0, minSource}
 		ranges = append(ranges, firstRange)
 	}
-	maxSource := slices.Max(ends)
 	if maxSource < math.MaxInt {
 		lastRange := numberRange{maxSource, maxSource, math.MaxInt - maxSource}
 		ranges = append(ranges, lastRange)
@@ -53,13 +58,13 @@ func parseInput(input string) (seeds []int, mappings [][]numberRange) {
 	s := strings.Fields(matches[0][1])
 	seeds = make([]int, len(s))
 	for i, m := range s {
-		s, _ := strconv.Atoi(m)
-		seeds[i] = s
+		seed, _ := strconv.Atoi(m)
+		seeds[i] = seed
 	}
 
 	mappings = make([][]numberRange, 7)
 	for i := 0; i < 7; i++ {
-		mappings[i] = makeMapping(matches[0][i+2])
+		mappings[i] = parseMapping(matches[0][i+2])
 	}
 	return seeds, mappings
 }

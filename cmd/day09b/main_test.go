@@ -9,14 +9,12 @@ import (
 
 func TestExamplePart1(t *testing.T) {
 	t.Parallel()
-	c, err := NewCommand(
-		WithInputFile(filepath.Join(projectpath.Root, "cmd", "day09", "testinput")),
-	)
+	p, err := NewPuzzle09(filepath.Join(projectpath.Root, "cmd", "day09", "testinput"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := 114
-	got := c.part1()
+	got := p.Part1()
 	if want != got {
 		t.Errorf("want %d, got %d", want, got)
 	}
