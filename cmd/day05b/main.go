@@ -2,19 +2,28 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"log"
 	"math"
-	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
 var almanacRE = regexp.MustCompile(`(?ms)^seeds: (.*)$\s*^seed-to-soil map:\s*([\d\s]+)$\s*^soil-to-fertilizer map:\s*([\d\s]+)$\s*^fertilizer-to-water map:\s*([\d\s]+)$\s*^water-to-light map:\s*([\d\s]+)$\s*^light-to-temperature map:\s*([\d\s]+)$\s*^temperature-to-humidity map:\s*([\d\s]+)$\s*^humidity-to-location map:\s*([\d\s]+)$`)
 
 type numberRange struct {
 	destination, source, length int
+}
+
+type Day05b struct {
+	day.DayInput
+}
+
+func NewDay05b(inputFile string) Day05b {
+	return Day05b{day.DayInput(inputFile)}
 }
 
 func parseRange(s string) numberRange {
@@ -26,7 +35,7 @@ func parseRange(s string) numberRange {
 }
 
 func parseMapping(s string) []numberRange {
-	// assumes ranges are connected
+	// assumes ranges do not contain gaps
 	ranges := make([]numberRange, 0)
 	scanner := bufio.NewScanner(strings.NewReader(s))
 	minSource := math.MaxInt
@@ -62,8 +71,10 @@ func parseInput(input string) (seeds []int, mappings [][]numberRange) {
 		seeds[i] = seed
 	}
 
-	mappings = make([][]numberRange, 7)
-	for i := 0; i < 7; i++ {
+	nMappings := len(matches[0]) - 2
+
+	mappings = make([][]numberRange, nMappings)
+	for i := 0; i < nMappings; i++ {
 		mappings[i] = parseMapping(matches[0][i+2])
 	}
 	return seeds, mappings
@@ -104,38 +115,7 @@ func mergeMappings(a, b []numberRange) []numberRange {
 	return result
 }
 
-func main() {
-	input, err := os.ReadFile("./cmd/day05b/input")
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
-
-	seeds, mappings := parseInput(string(input))
-	for i, m := range mappings {
-		fmt.Printf("[%d] %v\n", i, m)
-	}
-
-	// fmt.Println(part1(seeds, mappings))
-	// fmt.Println(part2(seeds, mappings))
-	seedMappings := make([]numberRange, len(seeds)/2)
-	for i := 0; i < len(seeds); i += 2 {
-		seedMappings[i/2] = numberRange{seeds[i], seeds[i], seeds[i+1]}
-	}
-
-	// result := seedMappings
-	// for i := range mappings {
-	// 	combinedMappings := make([]numberRange, 0)
-	// 	for _, combinedMapping := range result {
-	// 		for _, m := range mappings[i] {
-	// 			combined := mergeRanges(combinedMapping, m)
-	// 			if combined.length > 0 {
-	// 				combinedMappings = append(combinedMappings, combined)
-	// 			}
-	// 		}
-	// 	}
-	// 	result = combinedMappings
-	// }
-
+func minLocation(seedMappings []numberRange, mappings [][]numberRange) int {
 	result := seedMappings
 	for _, mapping := range mappings {
 		result = mergeMappings(result, mapping)
@@ -147,5 +127,36 @@ func main() {
 			min = r.destination
 		}
 	}
-	fmt.Printf("result mappings: %v\nmin: %d\n", result, min)
+
+	return min
+}
+
+func (d Day05b) Part1() int {
+	input, _ := d.ReadFile()
+	seeds, mappings := parseInput(string(input))
+
+	seedMappings := make([]numberRange, len(seeds))
+	for i := 0; i < len(seeds); i++ {
+		seedMappings[i] = numberRange{seeds[i], seeds[i], 1}
+	}
+
+	return minLocation(seedMappings, mappings)
+}
+
+func (d Day05b) Part2() int {
+	input, _ := d.ReadFile()
+	seeds, mappings := parseInput(string(input))
+
+	seedMappings := make([]numberRange, len(seeds)/2)
+	for i := 0; i < len(seeds); i += 2 {
+		seedMappings[i/2] = numberRange{seeds[i], seeds[i], seeds[i+1]}
+	}
+
+	return minLocation(seedMappings, mappings)
+}
+
+func main() {
+	d := NewDay05b(filepath.Join(projectpath.Root, "cmd", "day05", "input.txt"))
+
+	day.Solve(d)
 }

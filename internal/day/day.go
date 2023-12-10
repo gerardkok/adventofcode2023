@@ -35,6 +35,10 @@ func (d DayInput) ReadLines() ([]string, error) {
 	return result, nil
 }
 
+func (d DayInput) ReadFile() ([]byte, error) {
+	return os.ReadFile(string(d))
+}
+
 func Solve(p Day) {
 	fmt.Println(p.Part1())
 	fmt.Println(p.Part2())

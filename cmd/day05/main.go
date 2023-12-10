@@ -2,21 +2,30 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"log"
 	"math"
-	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
 var almanacRE = regexp.MustCompile(`(?ms)^seeds: (.*)$\s*^seed-to-soil map:\s*([\d\s]+)$\s*^soil-to-fertilizer map:\s*([\d\s]+)$\s*^fertilizer-to-water map:\s*([\d\s]+)$\s*^water-to-light map:\s*([\d\s]+)$\s*^light-to-temperature map:\s*([\d\s]+)$\s*^temperature-to-humidity map:\s*([\d\s]+)$\s*^humidity-to-location map:\s*([\d\s]+)$`)
 
 type numberRange struct {
 	destination, source, length int
+}
+
+type Day05 struct {
+	day.DayInput
+}
+
+func NewDay05(inputFile string) Day05 {
+	return Day05{day.DayInput(inputFile)}
 }
 
 func makeMapping(s string) []numberRange {
@@ -43,8 +52,10 @@ func parseInput(input string) (seeds []int, mappings [][]numberRange) {
 		seeds[i] = s
 	}
 
-	mappings = make([][]numberRange, 7)
-	for i := 0; i < 7; i++ {
+	nMappings := len(matches[0]) - 2
+
+	mappings = make([][]numberRange, nMappings)
+	for i := 0; i < nMappings; i++ {
 		mappings[i] = makeMapping(matches[0][i+2])
 	}
 	return seeds, mappings
@@ -68,7 +79,10 @@ func findLocation(seed int, mappings [][]numberRange) int {
 	return result
 }
 
-func part1(seeds []int, mappings [][]numberRange) int {
+func (d Day05) Part1() int {
+	input, _ := d.ReadFile()
+	seeds, mappings := parseInput(string(input))
+
 	locations := make([]int, len(seeds))
 	for i, seed := range seeds {
 		locations[i] = findLocation(seed, mappings)
@@ -78,21 +92,10 @@ func part1(seeds []int, mappings [][]numberRange) int {
 	return location
 }
 
-func part2(seeds []int, mappings [][]numberRange) int {
-	min := math.MaxInt
-	for i := 0; i < len(seeds); i += 2 {
-		maxSeed := seeds[i] + seeds[i+1]
-		for j := seeds[i]; j < maxSeed; j++ {
-			location := findLocation(j, mappings)
-			if location < min {
-				min = location
-			}
-		}
-	}
-	return min
-}
+func (d Day05) Part2() int {
+	input, _ := d.ReadFile()
+	seeds, mappings := parseInput(string(input))
 
-func part3(seeds []int, mappings [][]numberRange) int {
 	var wg sync.WaitGroup
 
 	min := math.MaxInt
@@ -123,14 +126,7 @@ func part3(seeds []int, mappings [][]numberRange) int {
 }
 
 func main() {
-	input, err := os.ReadFile("./cmd/day05/input")
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
+	d := NewDay05(filepath.Join(projectpath.Root, "cmd", "day05", "input.txt"))
 
-	seeds, mappings := parseInput(string(input))
-
-	//fmt.Println(part1(seeds, mappings))
-	//fmt.Println(part2(seeds, mappings))
-	fmt.Println(part3(seeds, mappings))
+	day.Solve(d)
 }
