@@ -1,12 +1,12 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"log"
-	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
 type race struct {
@@ -14,25 +14,12 @@ type race struct {
 	distance int
 }
 
-func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/day06/testinput")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+type Day06 struct {
+	day.DayInput
+}
 
-	result := make([]string, 0)
-	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+func NewDay06(inputFile string) Day06 {
+	return Day06{day.DayInput(inputFile)}
 }
 
 func iSqrt(num int) int {
@@ -59,7 +46,8 @@ func winRaceOptions(r race) int {
 	return s
 }
 
-func part1(input []string) int {
+func (day Day06) Part1() int {
+	input, _ := day.ReadLines()
 	times := strings.Fields(input[0])
 	distances := strings.Fields(input[1])
 	races := make([]race, len(times)-1)
@@ -77,7 +65,8 @@ func part1(input []string) int {
 	return result
 }
 
-func part2(input []string) int {
+func (day Day06) Part2() int {
+	input, _ := day.ReadLines()
 	times := strings.Fields(input[0])
 	distances := strings.Fields(input[1])
 
@@ -94,11 +83,7 @@ func part2(input []string) int {
 }
 
 func main() {
-	input, err := readInput()
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
+	d := NewDay06(filepath.Join(projectpath.Root, "cmd", "day06", "input.txt"))
 
-	fmt.Println(part1(input))
-	fmt.Println(part2(input))
+	day.Solve(d)
 }

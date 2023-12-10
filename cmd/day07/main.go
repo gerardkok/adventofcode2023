@@ -1,16 +1,24 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"log"
-	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
 type handType int
+
+type Day07 struct {
+	day.DayInput
+}
+
+func NewDay07(inputFile string) Day07 {
+	return Day07{day.DayInput(inputFile)}
+}
 
 const (
 	highCard handType = iota
@@ -39,27 +47,6 @@ type handBid struct {
 	hand     string
 	bid      int
 	handType handType
-}
-
-func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/day07/input")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	result := make([]string, 0)
-	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 func equalPatterns(a, b []int) bool {
@@ -133,7 +120,38 @@ func newHandBid(hand string, bid int, patternFn func(string) []int) handBid {
 	return handBid{hand, bid, handType}
 }
 
-func part1(input []string) int {
+func less(a, b handBid, faceOrder string) bool {
+	if a.handType < b.handType {
+		return true
+	}
+	if a.handType > b.handType {
+		return false
+	}
+
+	for k := 0; k < 5; k++ {
+		faceValueI := strings.IndexByte(faceOrder, a.hand[k])
+		faceValueJ := strings.IndexByte(faceOrder, b.hand[k])
+		if faceValueI < faceValueJ {
+			return true
+		}
+		if faceValueI > faceValueJ {
+			return false
+		}
+	}
+	return false
+}
+
+func winnings(handBids []handBid) int {
+	result := 0
+	for i, h := range handBids {
+		w := (i + 1) * h.bid
+		result += w
+	}
+	return result
+}
+
+func (d Day07) Part1() int {
+	input, _ := d.ReadLines()
 	handBids := make([]handBid, len(input))
 	for i, line := range input {
 		hand, b, _ := strings.Cut(line, " ")
@@ -142,35 +160,14 @@ func part1(input []string) int {
 	}
 
 	sort.Slice(handBids, func(i, j int) bool {
-		if handBids[i].handType < handBids[j].handType {
-			return true
-		}
-		if handBids[i].handType > handBids[j].handType {
-			return false
-		}
-
-		for k := 0; k < 5; k++ {
-			faceValueI := strings.IndexByte(faceOrder1, handBids[i].hand[k])
-			faceValueJ := strings.IndexByte(faceOrder1, handBids[j].hand[k])
-			if faceValueI < faceValueJ {
-				return true
-			}
-			if faceValueI > faceValueJ {
-				return false
-			}
-		}
-		return false
+		return less(handBids[i], handBids[j], faceOrder1)
 	})
 
-	totalWinnings := 0
-	for i, h := range handBids {
-		w := (i + 1) * h.bid
-		totalWinnings += w
-	}
-	return totalWinnings
+	return winnings(handBids)
 }
 
-func part2(input []string) int {
+func (d Day07) Part2() int {
+	input, _ := d.ReadLines()
 	handBids := make([]handBid, len(input))
 	for i, line := range input {
 		hand, b, _ := strings.Cut(line, " ")
@@ -179,40 +176,14 @@ func part2(input []string) int {
 	}
 
 	sort.Slice(handBids, func(i, j int) bool {
-		if handBids[i].handType < handBids[j].handType {
-			return true
-		}
-		if handBids[i].handType > handBids[j].handType {
-			return false
-		}
-
-		for k := 0; k < 5; k++ {
-			faceValueI := strings.IndexByte(faceOrder2, handBids[i].hand[k])
-			faceValueJ := strings.IndexByte(faceOrder2, handBids[j].hand[k])
-			if faceValueI < faceValueJ {
-				return true
-			}
-			if faceValueI > faceValueJ {
-				return false
-			}
-		}
-		return false
+		return less(handBids[i], handBids[j], faceOrder2)
 	})
 
-	totalWinnings := 0
-	for i, h := range handBids {
-		w := (i + 1) * h.bid
-		totalWinnings += w
-	}
-	return totalWinnings
+	return winnings(handBids)
 }
 
 func main() {
-	input, err := readInput()
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
+	d := NewDay07(filepath.Join(projectpath.Root, "cmd", "day07", "input.txt"))
 
-	fmt.Println(part1(input))
-	fmt.Println(part2(input))
+	day.Solve(d)
 }

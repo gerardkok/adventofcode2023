@@ -2,16 +2,26 @@ package main
 
 import (
 	"bufio"
-	"fmt"
-	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
 var nodeRE = regexp.MustCompile(`(\w+)\s*=\s*\((\w+),\s*(\w+)\)`)
 
 type node map[byte]string
+
+type Day08 struct {
+	day.DayInput
+}
+
+func NewDay08(inputFile string) Day08 {
+	return Day08{day.DayInput(inputFile)}
+}
 
 func readInput() ([]string, error) {
 	file, err := os.Open("./cmd/day08/input")
@@ -53,7 +63,8 @@ func parseInput(input []string) (directions string, graph map[string]node) {
 	return directions, graph
 }
 
-func part1(input []string) int {
+func (d Day08) Part1() int {
+	input, _ := d.ReadLines()
 	directions, graph := parseInput(input)
 
 	steps := 0
@@ -109,7 +120,8 @@ func LCM(a, b int, integers ...int) int {
 	return result
 }
 
-func part2(input []string) int {
+func (d Day08) Part2() int {
+	input, _ := d.ReadLines()
 	directions, graph := parseInput(input)
 
 	current := startState(graph)
@@ -122,11 +134,7 @@ func part2(input []string) int {
 }
 
 func main() {
-	input, err := readInput()
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
+	d := NewDay08(filepath.Join(projectpath.Root, "cmd", "day08", "input.txt"))
 
-	fmt.Println(part1(input))
-	fmt.Println(part2(input))
+	day.Solve(d)
 }
