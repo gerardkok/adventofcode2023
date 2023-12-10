@@ -66,8 +66,9 @@ func (d Diagram) connectsWest(t Tile) bool {
 	return b == '-' || b == '7' || b == 'J'
 }
 
-func (d Diagram) findS() (S, left, right Tile, valueS byte) {
-	S, left, right = Tile{}, Tile{}, Tile{}
+func (d Diagram) findS() (S, next Tile, valueS byte) {
+	// picks one of the two tiles connected to S as next tile
+	S, next = Tile{}, Tile{}
 	for i := range d {
 		for j := range d[i] {
 			if d[i][j] == 'S' {
@@ -82,18 +83,18 @@ func (d Diagram) findS() (S, left, right Tile, valueS byte) {
 	w := S.west()
 	switch {
 	case d.connectsSouth(n) && d.connectsNorth(s):
-		return S, n, s, '|'
+		return S, n, '|'
 	case d.connectsSouth(n) && d.connectsEast(w):
-		return S, n, w, 'J'
+		return S, n, 'J'
 	case d.connectsSouth(n) && d.connectsWest(e):
-		return S, n, e, 'L'
+		return S, n, 'L'
 	case d.connectsNorth(s) && d.connectsEast(w):
-		return S, s, w, '7'
+		return S, s, '7'
 	case d.connectsNorth(s) && d.connectsWest(e):
-		return S, s, e, 'F'
+		return S, s, 'F'
 	default:
 		// d.connectsEast(w) && d.connectsWest(e)
-		return S, w, e, '-'
+		return S, w, '-'
 	}
 }
 
@@ -130,17 +131,15 @@ func (d Diagram) nextTile(current, previous Tile) Tile {
 func (d Day10) Part1() int {
 	input, _ := d.ReadLines()
 	diagram := makeDiagram(input)
-	S, left, right, _ := diagram.findS()
-	leftPrevious := S
-	rightPrevious := S
-	distance := 1
+	S, current, _ := diagram.findS()
+	previous := S
+	length := 1
 
-	for left != right {
-		left, leftPrevious = diagram.nextTile(left, leftPrevious), left
-		right, rightPrevious = diagram.nextTile(right, rightPrevious), right
-		distance++
+	for current != S {
+		current, previous = diagram.nextTile(current, previous), current
+		length++
 	}
-	return distance
+	return length / 2
 }
 
 func odd(num int) bool {
@@ -195,18 +194,14 @@ func (d Day10) Part2() int {
 		mainLoop[i] = make([]byte, len(diagram[0]))
 	}
 
-	S, left, right, valueS := diagram.findS()
+	S, current, valueS := diagram.findS()
 	mainLoop.set(S, valueS)
-	leftPrevious := S
-	rightPrevious := S
+	previous := S
 
-	for left != right {
-		mainLoop.set(left, diagram.get(left))
-		mainLoop.set(right, diagram.get(right))
-		left, leftPrevious = diagram.nextTile(left, leftPrevious), left
-		right, rightPrevious = diagram.nextTile(right, rightPrevious), right
+	for current != S {
+		mainLoop.set(current, diagram.get(current))
+		current, previous = diagram.nextTile(current, previous), current
 	}
-	mainLoop.set(left, diagram.get(left))
 
 	return countInside(mainLoop)
 }
