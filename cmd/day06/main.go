@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -16,7 +15,7 @@ type race struct {
 }
 
 func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/day06/input")
+	file, err := os.Open("./cmd/day06/testinput")
 	if err != nil {
 		return nil, err
 	}
@@ -36,26 +35,28 @@ func readInput() ([]string, error) {
 	return result, nil
 }
 
-func isPerfectSquare(num int) int {
+func iSqrt(num int) int {
+	result := 0
 	for i := 1; i*i <= num; i++ {
-		if i*i == num {
-			return i
-		}
+		result = i
 	}
-	return 0
+	return result
 }
 
 func winRaceOptions(r race) int {
+	// quadratic formula
 	D := r.time*r.time - 4*r.distance
-	if i := isPerfectSquare(D); i > 0 {
-		// ending in the same time is not winning
-		lower := (r.time - i) / 2
-		upper := (r.time + i) / 2
-		return upper - lower - 1
+	s := iSqrt(D)
+	perfectSquare := s*s == D
+	if s%2 == r.time%2 {
+		// if both are even or both are odd, you can fit one more win in
+		s++
 	}
-	lower := int(math.Ceil((float64(r.time) - math.Sqrt(float64(D))) / 2.0))
-	upper := int(math.Floor((float64(r.time) + math.Sqrt(float64(D))) / 2.0))
-	return upper - lower + 1
+	if perfectSquare {
+		// tied with record, subtract both ties
+		return s - 2
+	}
+	return s
 }
 
 func part1(input []string) int {
