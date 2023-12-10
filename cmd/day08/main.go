@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -21,27 +19,6 @@ type Day08 struct {
 
 func NewDay08(inputFile string) Day08 {
 	return Day08{day.DayInput(inputFile)}
-}
-
-func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/day08/input")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	result := make([]string, 0)
-	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }
 
 func parseInput(input []string) (directions string, graph map[string]node) {

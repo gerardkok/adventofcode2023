@@ -9,7 +9,7 @@ import (
 
 func TestExamplePart1(t *testing.T) {
 	t.Parallel()
-	d := NewDay09b(filepath.Join(projectpath.Root, "cmd", "day09", "example.txt"))
+	d := NewDay09(filepath.Join(projectpath.Root, "cmd", "day09", "example.txt"))
 
 	want := 114
 	got := d.Part1()
@@ -20,7 +20,7 @@ func TestExamplePart1(t *testing.T) {
 
 func TestExamplePart2(t *testing.T) {
 	t.Parallel()
-	d := NewDay09b(filepath.Join(projectpath.Root, "cmd", "day09", "example.txt"))
+	d := NewDay09(filepath.Join(projectpath.Root, "cmd", "day09", "example.txt"))
 
 	want := 2
 	got := d.Part2()

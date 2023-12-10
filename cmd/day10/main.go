@@ -125,7 +125,7 @@ func (d Diagram) nextTile(current, previous Tile) Tile {
 
 func (d Day10) Part1() int {
 	input, _ := d.ReadLines()
-	diagram := Diagram(input)
+	diagram := makeDiagram(input)
 	S, left, right, _ := diagram.findS()
 	leftPrevious := S
 	rightPrevious := S

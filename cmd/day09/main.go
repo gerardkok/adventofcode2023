@@ -1,33 +1,20 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"log"
-	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
-func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/day09/input")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+type Day09 struct {
+	day.DayInput
+}
 
-	result := make([]string, 0)
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+func NewDay09(inputFile string) Day09 {
+	return Day09{day.DayInput(inputFile)}
 }
 
 func allZeroes(s []int) bool {
@@ -58,9 +45,6 @@ func expandTriangleForward(triangle [][]int) [][]int {
 	depth := len(triangle)
 	result := make([][]int, depth)
 	result[depth-1] = make([]int, len(triangle[depth-1])+1)
-	for i := range result[depth-1] {
-		result[depth-1][i] = 0
-	}
 
 	for i := depth - 2; i >= 0; i-- {
 		result[i] = make([]int, len(triangle[i])+1)
@@ -77,7 +61,8 @@ func extrapolateForward(sequence []int) int {
 	return expandedTriangle[0][len(expandedTriangle[0])-1]
 }
 
-func part1(input []string) int {
+func (d Day09) Part1() int {
+	input, _ := d.ReadLines()
 	sum := 0
 	for _, line := range input {
 		fields := strings.Fields(line)
@@ -96,9 +81,6 @@ func expandTriangleBackward(triangle [][]int) [][]int {
 	depth := len(triangle)
 	result := make([][]int, depth)
 	result[depth-1] = make([]int, len(triangle[depth-1])+1)
-	for i := range result[depth-1] {
-		result[depth-1][i] = 0
-	}
 
 	for i := depth - 2; i >= 0; i-- {
 		result[i] = make([]int, len(triangle[i])+1)
@@ -111,13 +93,12 @@ func expandTriangleBackward(triangle [][]int) [][]int {
 
 func extrapolateBackward(sequence []int) int {
 	triangle := makeTriangle(sequence)
-	fmt.Printf("triangle: %v\n", triangle)
 	expandedTriangle := expandTriangleBackward(triangle)
-	fmt.Printf("expanded triangle: %v\n", expandedTriangle)
 	return expandedTriangle[0][0]
 }
 
-func part2(input []string) int {
+func (d Day09) Part2() int {
+	input, _ := d.ReadLines()
 	sum := 0
 	for _, line := range input {
 		fields := strings.Fields(line)
@@ -133,11 +114,7 @@ func part2(input []string) int {
 }
 
 func main() {
-	input, err := readInput()
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
+	d := NewDay09(filepath.Join(projectpath.Root, "cmd", "day09", "input"))
 
-	fmt.Println(part1(input))
-	fmt.Println(part2(input))
+	day.Solve(d)
 }

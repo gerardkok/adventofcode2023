@@ -9,12 +9,12 @@ import (
 	"adventofcode23/internal/projectpath"
 )
 
-type Day09 struct {
+type Day09b struct {
 	day.DayInput
 }
 
-func NewDay09(inputFile string) Day09 {
-	return Day09{day.DayInput(inputFile)}
+func NewDay09b(inputFile string) Day09b {
+	return Day09b{day.DayInput(inputFile)}
 }
 
 func binomialCoefficients(n int) []int {
@@ -59,7 +59,7 @@ func reverse(r []int) []int {
 	return result
 }
 
-func (d Day09) Part1() int {
+func (d Day09b) Part1() int {
 	input, _ := d.ReadLines()
 	sum := 0
 	for _, line := range input {
@@ -75,7 +75,7 @@ func (d Day09) Part1() int {
 	return sum
 }
 
-func (d Day09) Part2() int {
+func (d Day09b) Part2() int {
 	input, _ := d.ReadLines()
 	sum := 0
 	for _, line := range input {
@@ -92,7 +92,7 @@ func (d Day09) Part2() int {
 }
 
 func main() {
-	d := NewDay09(filepath.Join(projectpath.Root, "cmd", "day09", "input"))
+	d := NewDay09b(filepath.Join(projectpath.Root, "cmd", "day09", "input"))
 
 	day.Solve(d)
 }
