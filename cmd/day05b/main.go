@@ -5,6 +5,7 @@ import (
 	"math"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -35,7 +36,6 @@ func parseRange(s string) numberRange {
 }
 
 func parseMapping(s string) []numberRange {
-	// assumes ranges do not contain gaps
 	ranges := make([]numberRange, 0)
 	scanner := bufio.NewScanner(strings.NewReader(s))
 	minSource := math.MaxInt
@@ -50,15 +50,38 @@ func parseMapping(s string) []numberRange {
 		}
 		ranges = append(ranges, r)
 	}
-	if minSource > 0 {
-		firstRange := numberRange{0, 0, minSource}
-		ranges = append(ranges, firstRange)
+
+	return addMissingRanges(ranges)
+}
+
+func addMissingRanges(mapping []numberRange) []numberRange {
+	sort.Slice(mapping, func(i, j int) bool {
+		return mapping[i].source < mapping[j].source
+	})
+
+	result := make([]numberRange, 0)
+	if mapping[0].source > 0 {
+		firstRange := numberRange{0, 0, mapping[0].source}
+		result = append(result, firstRange)
 	}
-	if maxSource < math.MaxInt {
-		lastRange := numberRange{maxSource, maxSource, math.MaxInt - maxSource}
-		ranges = append(ranges, lastRange)
+	for i := 0; i < len(mapping)-1; i++ {
+		result = append(result, mapping[i])
+		if mapping[i].source+mapping[i].length == mapping[i+1].source {
+			continue
+		}
+		s := mapping[i].source + mapping[i].length
+		l := mapping[i+1].source - s
+		r := numberRange{s, s, l}
+		result = append(result, r)
 	}
-	return ranges
+	result = append(result, mapping[len(mapping)-1])
+	if mapping[len(mapping)-1].source+mapping[len(mapping)-1].length < math.MaxInt {
+		s := mapping[len(mapping)-1].source + mapping[len(mapping)-1].length
+		l := math.MaxInt - s
+		lastRange := numberRange{s, s, l}
+		result = append(result, lastRange)
+	}
+	return result
 }
 
 func parseInput(input string) (seeds []int, mappings [][]numberRange) {
