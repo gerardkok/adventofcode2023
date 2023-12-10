@@ -1,13 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
-	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
 var partNumberRE = regexp.MustCompile(`\d+`)
@@ -16,25 +17,12 @@ type partNumber struct {
 	line, left, right, partNumber int
 }
 
-func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/day03/input")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+type Day03 struct {
+	day.DayInput
+}
 
-	result := make([]string, 0)
-	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+func NewDay03(inputFile string) Day03 {
+	return Day03{day.DayInput(inputFile)}
 }
 
 func makeSchema(input []string) []string {
@@ -78,16 +66,6 @@ func partNumbers(schema []string) []partNumber {
 	return result
 }
 
-func part1(input []string) int {
-	schema := makeSchema(input)
-	partNumbers := partNumbers(schema)
-	sum := 0
-	for _, p := range partNumbers {
-		sum += p.partNumber
-	}
-	return sum
-}
-
 func gear(line, col int) string {
 	return fmt.Sprintf("%d/%d", line, col)
 }
@@ -125,7 +103,19 @@ func gearMap(parts []partNumber, schema []string) map[string][]partNumber {
 	return result
 }
 
-func part2(input []string) int {
+func (d Day03) Part1() int {
+	input, _ := d.ReadLines()
+	schema := makeSchema(input)
+	partNumbers := partNumbers(schema)
+	sum := 0
+	for _, p := range partNumbers {
+		sum += p.partNumber
+	}
+	return sum
+}
+
+func (d Day03) Part2() int {
+	input, _ := d.ReadLines()
 	schema := makeSchema(input)
 	partNumbers := partNumbers(schema)
 	gearMap := gearMap(partNumbers, schema)
@@ -140,11 +130,7 @@ func part2(input []string) int {
 }
 
 func main() {
-	input, err := readInput()
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
+	d := NewDay03(filepath.Join(projectpath.Root, "cmd", "day03", "input.txt"))
 
-	fmt.Println(part1(input))
-	fmt.Println(part2(input))
+	day.Solve(d)
 }
