@@ -12,6 +12,10 @@ type Day10 struct {
 	day.DayInput
 }
 
+func NewDay10(inputFile string) Day10 {
+	return Day10{day.DayInput(inputFile)}
+}
+
 type Tile struct {
 	row, column int
 }
@@ -32,34 +36,34 @@ func (t Tile) west() Tile {
 	return Tile{t.row, t.column - 1}
 }
 
-type Diagram []string
+type Diagram [][]byte
 
-func (d Diagram) value(t Tile) byte {
+func (d Diagram) get(t Tile) byte {
 	return d[t.row][t.column]
 }
 
+func (d Diagram) set(t Tile, b byte) {
+	d[t.row][t.column] = b
+}
+
 func (d Diagram) connectsNorth(t Tile) bool {
-	b := d.value(t)
+	b := d.get(t)
 	return b == '|' || b == 'L' || b == 'J'
 }
 
 func (d Diagram) connectsSouth(t Tile) bool {
-	b := d.value(t)
+	b := d.get(t)
 	return b == '|' || b == '7' || b == 'F'
 }
 
 func (d Diagram) connectsEast(t Tile) bool {
-	b := d.value(t)
+	b := d.get(t)
 	return b == '-' || b == 'L' || b == 'F'
 }
 
 func (d Diagram) connectsWest(t Tile) bool {
-	b := d.value(t)
+	b := d.get(t)
 	return b == '-' || b == '7' || b == 'J'
-}
-
-func NewDay10(inputFile string) Day10 {
-	return Day10{day.DayInput(inputFile)}
 }
 
 func (d Diagram) findS() (S, left, right Tile, valueS byte) {
@@ -96,7 +100,7 @@ func (d Diagram) findS() (S, left, right Tile, valueS byte) {
 func (d Diagram) nextTile(current, previous Tile) Tile {
 	var r Tile
 	var l Tile
-	switch d.value(current) {
+	switch d.get(current) {
 	case '|':
 		l = current.north()
 		r = current.south()
@@ -174,11 +178,11 @@ func countInside(mainLoop [][]byte) int {
 }
 
 func makeDiagram(input []string) Diagram {
-	result := make([]string, len(input)+2)
-	result[0] = strings.Repeat(".", len(input[0])+2)
+	result := make(Diagram, len(input)+2)
+	result[0] = []byte(strings.Repeat(".", len(input[0])+2))
 	result[len(input)+1] = result[0]
 	for i, line := range input {
-		result[i+1] = "." + line + "."
+		result[i+1] = []byte("." + line + ".")
 	}
 	return result
 }
@@ -186,23 +190,23 @@ func makeDiagram(input []string) Diagram {
 func (d Day10) Part2() int {
 	input, _ := d.ReadLines()
 	diagram := makeDiagram(input)
-	mainLoop := make([][]byte, len(diagram))
+	mainLoop := make(Diagram, len(diagram))
 	for i := range mainLoop {
 		mainLoop[i] = make([]byte, len(diagram[0]))
 	}
 
 	S, left, right, valueS := diagram.findS()
-	mainLoop[S.row][S.column] = valueS
+	mainLoop.set(S, valueS)
 	leftPrevious := S
 	rightPrevious := S
 
 	for left != right {
-		mainLoop[left.row][left.column] = diagram[left.row][left.column]
-		mainLoop[right.row][right.column] = diagram[right.row][right.column]
+		mainLoop.set(left, diagram.get(left))
+		mainLoop.set(right, diagram.get(right))
 		left, leftPrevious = diagram.nextTile(left, leftPrevious), left
 		right, rightPrevious = diagram.nextTile(right, rightPrevious), right
 	}
-	mainLoop[left.row][left.column] = diagram[left.row][left.column]
+	mainLoop.set(left, diagram.get(left))
 
 	return countInside(mainLoop)
 }
