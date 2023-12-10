@@ -60,27 +60,31 @@ func addMissingRanges(mapping []numberRange) []numberRange {
 	})
 
 	result := make([]numberRange, 0)
+	last := len(mapping) - 1
+
 	if mapping[0].source > 0 {
 		firstRange := numberRange{0, 0, mapping[0].source}
 		result = append(result, firstRange)
 	}
-	for i := 0; i < len(mapping)-1; i++ {
+
+	for i := 0; i < last; i++ {
 		result = append(result, mapping[i])
-		if mapping[i].source+mapping[i].length == mapping[i+1].source {
+		end := mapping[i].source + mapping[i].length
+		next := mapping[i+1].source
+		if end == next {
 			continue
 		}
-		s := mapping[i].source + mapping[i].length
-		l := mapping[i+1].source - s
-		r := numberRange{s, s, l}
-		result = append(result, r)
+		missingRange := numberRange{end, end, next - end}
+		result = append(result, missingRange)
 	}
-	result = append(result, mapping[len(mapping)-1])
-	if mapping[len(mapping)-1].source+mapping[len(mapping)-1].length < math.MaxInt {
-		s := mapping[len(mapping)-1].source + mapping[len(mapping)-1].length
-		l := math.MaxInt - s
-		lastRange := numberRange{s, s, l}
+	result = append(result, mapping[last])
+
+	lastEnd := mapping[last].source + mapping[last].length
+	if lastEnd < math.MaxInt {
+		lastRange := numberRange{lastEnd, lastEnd, math.MaxInt - lastEnd}
 		result = append(result, lastRange)
 	}
+
 	return result
 }
 
