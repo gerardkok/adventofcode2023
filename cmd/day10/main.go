@@ -8,8 +8,8 @@ import (
 	"adventofcode23/internal/projectpath"
 )
 
-type Puzzle10 struct {
-	day.Day
+type Day10 struct {
+	day.DayInput
 }
 
 type Tile struct {
@@ -58,12 +58,8 @@ func (d Diagram) connectsWest(t Tile) bool {
 	return b == '-' || b == '7' || b == 'J'
 }
 
-func NewPuzzle10(inputFile string) Puzzle10 {
-	d := day.Day{
-		InputFile: inputFile,
-	}
-
-	return Puzzle10{d}
+func NewDay10(inputFile string) Day10 {
+	return Day10{day.DayInput(inputFile)}
 }
 
 func (d Diagram) findS() (S, left, right Tile, valueS byte) {
@@ -127,8 +123,8 @@ func (d Diagram) nextTile(current, previous Tile) Tile {
 	return l
 }
 
-func (p Puzzle10) Part1() int {
-	input, _ := p.ReadLines()
+func (d Day10) Part1() int {
+	input, _ := d.ReadLines()
 	diagram := Diagram(input)
 	S, left, right, _ := diagram.findS()
 	leftPrevious := S
@@ -187,8 +183,8 @@ func makeDiagram(input []string) Diagram {
 	return result
 }
 
-func (p Puzzle10) Part2() int {
-	input, _ := p.ReadLines()
+func (d Day10) Part2() int {
+	input, _ := d.ReadLines()
 	diagram := makeDiagram(input)
 	mainLoop := make([][]byte, len(diagram))
 	for i := range mainLoop {
@@ -212,7 +208,7 @@ func (p Puzzle10) Part2() int {
 }
 
 func main() {
-	p := NewPuzzle10(filepath.Join(projectpath.Root, "cmd", "day10", "input.txt"))
+	d := NewDay10(filepath.Join(projectpath.Root, "cmd", "day10", "input.txt"))
 
-	day.Solve(p)
+	day.Solve(d)
 }

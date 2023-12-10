@@ -6,38 +6,16 @@ import (
 	"os"
 )
 
-type Puzzle interface {
+type Day interface {
 	ReadLines() ([]string, error)
 	Part1() int
 	Part2() int
 }
 
-type Day struct {
-	InputFile string
-}
+type DayInput string
 
-// type Option func(*Day) error
-
-// func WithInputFile(file string) Option {
-// 	return func(d *Day) error {
-// 		d.InputFile = file
-// 		return nil
-// 	}
-// }
-
-// func NewDay(opts ...Option) (Day, error) {
-// 	c := Day{}
-// 	for _, opt := range opts {
-// 		err := opt(&c)
-// 		if err != nil {
-// 			return Day{}, err
-// 		}
-// 	}
-// 	return c, nil
-// }
-
-func (d Day) ReadLines() ([]string, error) {
-	file, err := os.Open(d.InputFile)
+func (d DayInput) ReadLines() ([]string, error) {
+	file, err := os.Open(string(d))
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +35,7 @@ func (d Day) ReadLines() ([]string, error) {
 	return result, nil
 }
 
-func Solve(p Puzzle) {
+func Solve(p Day) {
 	fmt.Println(p.Part1())
 	fmt.Println(p.Part2())
 }

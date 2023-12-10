@@ -1,11 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"errors"
-	"io"
-	"log"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,80 +9,12 @@ import (
 	"adventofcode23/internal/projectpath"
 )
 
-type Puzzle09 struct {
-	day.Day
+type Day09 struct {
+	day.DayInput
 }
 
-type command struct {
-	inputFile string
-	output    io.Writer
-}
-
-type option func(*command) error
-
-func WithInputFile(file string) option {
-	return func(c *command) error {
-		c.inputFile = file
-		return nil
-	}
-}
-
-func WithOutput(output io.Writer) option {
-	return func(c *command) error {
-		if output == nil {
-			return errors.New("nil output writer")
-		}
-		c.output = output
-		return nil
-	}
-}
-
-func NewCommand(opts ...option) (command, error) {
-	c := command{
-		output: os.Stdout,
-	}
-	for _, opt := range opts {
-		err := opt(&c)
-		if err != nil {
-			return command{}, err
-		}
-	}
-	return c, nil
-}
-
-func (c command) readInput() ([]string, error) {
-	file, err := os.Open(c.inputFile)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	result := make([]string, 0)
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func NewPuzzle09(inputFile string) (Puzzle09, error) {
-	// d, err := day.NewDay(
-	// 	day.WithInputFile(inputFile),
-	// )
-	// if err != nil {
-	// 	return Puzzle09{}, nil
-	// }
-	d := day.Day{
-		InputFile: inputFile,
-	}
-
-	return Puzzle09{d}, nil
+func NewDay09(inputFile string) Day09 {
+	return Day09{day.DayInput(inputFile)}
 }
 
 func binomialCoefficients(n int) []int {
@@ -132,8 +59,8 @@ func reverse(r []int) []int {
 	return result
 }
 
-func (p Puzzle09) Part1() int {
-	input, _ := p.ReadLines()
+func (d Day09) Part1() int {
+	input, _ := d.ReadLines()
 	sum := 0
 	for _, line := range input {
 		fields := strings.Fields(line)
@@ -148,8 +75,8 @@ func (p Puzzle09) Part1() int {
 	return sum
 }
 
-func (p Puzzle09) Part2() int {
-	input, _ := p.ReadLines()
+func (d Day09) Part2() int {
+	input, _ := d.ReadLines()
 	sum := 0
 	for _, line := range input {
 		fields := strings.Fields(line)
@@ -165,10 +92,7 @@ func (p Puzzle09) Part2() int {
 }
 
 func main() {
-	p, err := NewPuzzle09(filepath.Join(projectpath.Root, "cmd", "day09", "input"))
-	if err != nil {
-		log.Fatalf("can't create command: %v\n", err)
-	}
+	d := NewDay09(filepath.Join(projectpath.Root, "cmd", "day09", "input"))
 
-	day.Solve(p)
+	day.Solve(d)
 }
