@@ -1,34 +1,21 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"log"
-	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+
+	"adventofcode23/internal/day"
+	"adventofcode23/internal/projectpath"
 )
 
-func readInput() ([]string, error) {
-	file, err := os.Open("./cmd/day04/input")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+type Day04 struct {
+	day.DayInput
+}
 
-	result := make([]string, 0)
-	scanner := bufio.NewScanner(file)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
-	for scanner.Scan() {
-		result = append(result, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+func NewDay04(inputFile string) Day04 {
+	return Day04{day.DayInput(inputFile)}
 }
 
 func numbers(s string) []int {
@@ -63,7 +50,8 @@ func cardValue(line string) int {
 	return 1 << (count - 1)
 }
 
-func part1(lines []string) int {
+func (d Day04) Part1() int {
+	lines, _ := d.ReadLines()
 	sum := 0
 	for _, line := range lines {
 		value := cardValue(line)
@@ -72,7 +60,8 @@ func part1(lines []string) int {
 	return sum
 }
 
-func part2(lines []string) int {
+func (d Day04) Part2() int {
+	lines, _ := d.ReadLines()
 	matchCount := make([]int, len(lines))
 	for i, line := range lines {
 		matchCount[i] = countMatches(line)
@@ -94,14 +83,7 @@ func part2(lines []string) int {
 }
 
 func main() {
-	lines, err := readInput()
-	if err != nil {
-		log.Fatalf("can't read input: %v\n", err)
-	}
+	d := NewDay04(filepath.Join(projectpath.Root, "cmd", "day04", "input.txt"))
 
-	part1 := part1(lines)
-	fmt.Println(part1)
-
-	part2 := part2(lines)
-	fmt.Println(part2)
+	day.Solve(d)
 }
