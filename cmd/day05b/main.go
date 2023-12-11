@@ -111,9 +111,9 @@ func mergeMappings(a, b []numberRange) []numberRange {
 	result := make([]numberRange, 0)
 	for _, m := range a {
 		for _, n := range b {
-			combined := mergeRanges(m, n)
-			if combined.length > 0 {
-				result = append(result, combined)
+			merged := mergeRanges(m, n)
+			if merged.length > 0 {
+				result = append(result, merged)
 			}
 		}
 	}
