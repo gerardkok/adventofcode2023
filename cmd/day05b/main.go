@@ -5,6 +5,7 @@ import (
 	"math"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -51,33 +52,18 @@ func addMissingRanges(mapping []numberRange) []numberRange {
 		return mapping[i].source < mapping[j].source
 	})
 
-	result := make([]numberRange, 0)
-	last := len(mapping) - 1
-
-	if mapping[0].source > 0 {
-		firstRange := numberRange{0, 0, mapping[0].source}
-		result = append(result, firstRange)
+	bloated := make([]numberRange, 2*len(mapping)+1)
+	source := 0
+	for i := range mapping {
+		bloated[2*i] = numberRange{source, source, mapping[i].source - source}
+		bloated[2*i+1] = mapping[i]
+		source = mapping[i].source + mapping[i].length
 	}
+	bloated[2*len(mapping)] = numberRange{source, source, math.MaxInt - source}
 
-	for i := 0; i < last; i++ {
-		result = append(result, mapping[i])
-		end := mapping[i].source + mapping[i].length
-		next := mapping[i+1].source
-		if end == next {
-			continue
-		}
-		missingRange := numberRange{end, end, next - end}
-		result = append(result, missingRange)
-	}
-	result = append(result, mapping[last])
-
-	lastEnd := mapping[last].source + mapping[last].length
-	if lastEnd < math.MaxInt {
-		lastRange := numberRange{lastEnd, lastEnd, math.MaxInt - lastEnd}
-		result = append(result, lastRange)
-	}
-
-	return result
+	return slices.DeleteFunc(bloated, func(n numberRange) bool {
+		return n.length == 0
+	})
 }
 
 func parseInput(input string) (seeds []int, mappings [][]numberRange) {
@@ -91,11 +77,11 @@ func parseInput(input string) (seeds []int, mappings [][]numberRange) {
 	}
 
 	nMappings := len(matches[0]) - 2
-
 	mappings = make([][]numberRange, nMappings)
 	for i := 0; i < nMappings; i++ {
 		mappings[i] = parseMapping(matches[0][i+2])
 	}
+
 	return seeds, mappings
 }
 
