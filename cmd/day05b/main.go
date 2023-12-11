@@ -38,16 +38,8 @@ func parseRange(s string) numberRange {
 func parseMapping(s string) []numberRange {
 	ranges := make([]numberRange, 0)
 	scanner := bufio.NewScanner(strings.NewReader(s))
-	minSource := math.MaxInt
-	maxSource := 0
 	for scanner.Scan() {
 		r := parseRange(scanner.Text())
-		if r.source < minSource {
-			minSource = r.source
-		}
-		if r.destination+r.length > maxSource {
-			maxSource = r.destination + r.length
-		}
 		ranges = append(ranges, r)
 	}
 
