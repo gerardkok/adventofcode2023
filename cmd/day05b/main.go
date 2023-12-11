@@ -54,10 +54,10 @@ func addMissingRanges(mapping []numberRange) []numberRange {
 
 	bloated := make([]numberRange, 2*len(mapping)+1)
 	source := 0
-	for i := range mapping {
-		bloated[2*i] = numberRange{source, source, mapping[i].source - source}
-		bloated[2*i+1] = mapping[i]
-		source = mapping[i].source + mapping[i].length
+	for i, m := range mapping {
+		bloated[2*i] = numberRange{source, source, m.source - source}
+		bloated[2*i+1] = m
+		source = m.source + m.length
 	}
 	bloated[2*len(mapping)] = numberRange{source, source, math.MaxInt - source}
 
