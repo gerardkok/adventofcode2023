@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -93,8 +92,7 @@ func (d Day12) Part2() int {
 	sum := 0
 	for _, line := range lines {
 		r1, l1, _ := strings.Cut(line, " ")
-		record := strings.Join([]string{r1, r1, r1, r1, r1}, "?")
-		record += "."
+		record := strings.Join([]string{r1, r1, r1, r1, r1}, "?") + "."
 		l := strings.Join([]string{l1, l1, l1, l1, l1}, ",")
 		layout := parseLayout(l)
 
@@ -125,5 +123,5 @@ func (d Day12) Part1() int {
 func main() {
 	d := NewDay12(filepath.Join(projectpath.Root, "cmd", "day12", "input.txt"))
 
-	fmt.Println(d.Part2())
+	day.Solve(d)
 }
