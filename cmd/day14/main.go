@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"adventofcode23/internal/day"
@@ -51,21 +50,13 @@ func (p *platform) rotate() {
 func (d Day14) Part1() int {
 	lines, _ := d.ReadLines()
 
-	p := make(platform, len(lines))
-	for i, line := range lines {
-		p[i] = []byte(line)
-	}
-
+	p := makePlatform(lines)
 	p.tilt()
+
 	return p.load()
 }
 
 func (p platform) load() int {
-	north := make([]int, len(p[0]))
-	for i := range north {
-		north[i] = len(p)
-	}
-
 	result := 0
 	for i, row := range p {
 		for _, c := range row {
@@ -82,13 +73,6 @@ func (p *platform) cycle() {
 		p.tilt()
 		p.rotate()
 	}
-}
-
-func (p *platform) print() {
-	for _, line := range *p {
-		fmt.Println(string(line))
-	}
-	fmt.Println()
 }
 
 func equal(p, q platform) bool {
@@ -133,13 +117,18 @@ func (p *platform) findLoop() (int, []platform) {
 	}
 }
 
-func (d Day14) Part2() int {
-	lines, _ := d.ReadLines()
-
+func makePlatform(lines []string) platform {
 	p := make(platform, len(lines))
 	for i, line := range lines {
 		p[i] = []byte(line)
 	}
+	return p
+}
+
+func (d Day14) Part2() int {
+	lines, _ := d.ReadLines()
+
+	p := makePlatform(lines)
 
 	s, e := p.findLoop()
 
