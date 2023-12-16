@@ -31,7 +31,7 @@ type bounce struct {
 }
 
 var bounceMap = map[byte]map[direction][]bounce{
-	' ': {},
+	' ': {}, // edge, beam dims
 	'.': {
 		north: []bounce{{1, 0, north}},
 		east:  []bounce{{0, -1, east}},
@@ -65,7 +65,7 @@ var bounceMap = map[byte]map[direction][]bounce{
 }
 
 func (t tile) isEnergized() bool {
-	return len(t) != 0
+	return len(t) > 0
 }
 
 func (t tile) seen(from direction) bool {
@@ -143,16 +143,10 @@ func (d Day16) Part2() int {
 
 	maxEnergized := 0
 	for row := 1; row < len(grid)-1; row++ {
-		energized := max(grid.countEnergized(row, 1, west), grid.countEnergized(row, len(grid[0])-1, east))
-		if energized > maxEnergized {
-			maxEnergized = energized
-		}
+		maxEnergized = max(maxEnergized, grid.countEnergized(row, 1, west), grid.countEnergized(row, len(grid[0])-1, east))
 	}
 	for column := 1; column < len(grid[0])-1; column++ {
-		energized := max(grid.countEnergized(1, column, north), grid.countEnergized(len(grid)-1, column, south))
-		if energized > maxEnergized {
-			maxEnergized = energized
-		}
+		maxEnergized = max(maxEnergized, grid.countEnergized(1, column, north), grid.countEnergized(len(grid)-1, column, south))
 	}
 
 	return maxEnergized
