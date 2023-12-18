@@ -23,9 +23,8 @@ type direction int
 type heatMap [][]int
 
 type state struct {
-	row, column   int
-	entrance      direction
-	directionKept int
+	row, column int
+	entrance    direction
 }
 
 const (
@@ -41,15 +40,15 @@ type turn struct {
 }
 
 var turnMap = map[direction][]turn{
-	north: {{0, -1, east}, {1, 0, north}, {0, 1, west}},
-	east:  {{-1, 0, south}, {0, -1, east}, {1, 0, north}},
-	south: {{0, 1, west}, {-1, 0, south}, {0, -1, east}},
-	west:  {{1, 0, north}, {0, 1, west}, {-1, 0, south}},
+	north: {{0, -1, east}, {0, 1, west}},
+	east:  {{-1, 0, south}, {1, 0, north}},
+	south: {{0, 1, west}, {0, -1, east}},
+	west:  {{1, 0, north}, {-1, 0, south}},
 }
 
-type item struct {
+type node struct {
 	state state
-	loss  int
+	cost  int
 }
 
 type queue struct {
@@ -67,97 +66,75 @@ func (v visited) get(s state) int {
 
 func newQueue() queue {
 	q := pq.NewWith(func(a, b any) int {
-		return a.(item).loss - b.(item).loss
+		return a.(node).cost - b.(node).cost
 	})
 	return queue{q}
 }
 
-func (q *queue) enqueue(s state, loss int) {
-	i := item{s, loss}
+func (q *queue) enqueue(s state, cost int) {
+	i := node{s, cost}
 	q.Enqueue(i)
 }
 
 func (q *queue) dequeue() (state, int) {
 	entry, _ := q.Dequeue()
-	i := entry.(item)
-	return i.state, i.loss
+	i := entry.(node)
+	return i.state, i.cost
 }
 
-func (q *queue) isEmpty() bool {
-	return q.Empty()
-}
-
-func (d direction) print() string {
-	switch d {
-	case north:
-		return "north"
-	case east:
-		return "east"
-	case south:
-		return "south"
-	default:
-		return "west"
-	}
-}
-
-func (h heatMap) findMinLoss() int {
+func findMinCost(network map[state][]node, endRow, endColumn int) int {
 	q := newQueue()
+	q.enqueue(state{0, 0, north}, 0)
+	q.enqueue(state{0, 0, west}, 0)
 	v := make(visited)
-	q.enqueue(state{
-		row:           1,
-		column:        0,
-		entrance:      north,
-		directionKept: 1,
-	}, 0)
-	q.enqueue(state{
-		row:           0,
-		column:        1,
-		entrance:      west,
-		directionKept: 1,
-	}, 0)
-	for !q.isEmpty() {
-		s, l := q.dequeue()
-		// fmt.Printf("considering: [%d, %d] entrace: %s, direction kept: %d, l: %d\n", s.row, s.column, s.entrance.print(), s.directionKept, l)
-		loss := l + h[s.row][s.column]
-		// fmt.Printf("heat from block: %d, new loss: %d\n", h[s.row][s.column], loss)
-		if s.row == len(h)-1 && s.column == len(h[0])-1 {
-			return loss
+
+	for {
+		s, cost := q.dequeue()
+		if s.row == endRow && s.column == endColumn {
+			return cost
 		}
 
-		// if v, ok := visited[s]; ok && v <= loss {
-		// 	continue
-		// }
-		if v.get(s) <= loss {
+		if v.get(s) <= cost {
 			continue
 		}
 
-		v[s] = loss
-		for _, d := range turnMap[s.entrance] {
-			nextDirectionKept := 1
-			if d.nextEntrance == s.entrance {
-				if s.directionKept > 2 {
-					continue
-				}
-				nextDirectionKept = s.directionKept + 1
-			}
+		v[s] = cost
 
-			r := s.row + d.dRow
-			c := s.column + d.dColumn
-
-			if r < 0 || r > len(h)-1 || c < 0 || c > len(h[0])-1 {
-				continue
-			}
-
-			s := state{
-				row:           r,
-				column:        c,
-				entrance:      d.nextEntrance,
-				directionKept: nextDirectionKept,
-			}
-			q.enqueue(s, loss)
+		for _, newNode := range network[s] {
+			q.enqueue(newNode.state, cost+newNode.cost)
 		}
 	}
-	return -1
+}
+
+func (h heatMap) makeNetwork(minSteps, maxSteps int) map[state][]node {
+	result := make(map[state][]node)
+	for r, row := range h {
+		for c := range row {
+			for _, d := range []direction{north, east, south, west} {
+				start := state{r, c, d}
+				result[start] = make([]node, 0)
+
+				for s := minSteps; s <= maxSteps; s++ {
+					for _, turn := range turnMap[d] {
+						newR := r + turn.dRow*s
+						newC := c + turn.dColumn*s
+						if newR < 0 || newR > len(h)-1 || newC < 0 || newC > len(h[0])-1 {
+							continue
+						}
+
+						end := state{newR, newC, turn.nextEntrance}
+
+						cost := 0
+						for i := 1; i <= s; i++ {
+							cost += h[r+turn.dRow*i][c+turn.dColumn*i]
+						}
+						result[start] = append(result[start], node{end, cost})
+					}
+				}
+			}
+		}
+	}
+	return result
 }
 
 func makeHeatMap(lines []string) heatMap {
@@ -174,11 +151,15 @@ func makeHeatMap(lines []string) heatMap {
 func (d Day17) Part1() int {
 	lines, _ := d.ReadLines()
 	heatMap := makeHeatMap(lines)
-	return heatMap.findMinLoss()
+	network := heatMap.makeNetwork(1, 3)
+	return findMinCost(network, len(heatMap)-1, len(heatMap[0])-1)
 }
 
 func (d Day17) Part2() int {
-	return 0
+	lines, _ := d.ReadLines()
+	heatMap := makeHeatMap(lines)
+	network := heatMap.makeNetwork(4, 10)
+	return findMinCost(network, len(heatMap)-1, len(heatMap[0])-1)
 }
 
 func main() {
