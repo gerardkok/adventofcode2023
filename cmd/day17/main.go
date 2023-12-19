@@ -39,12 +39,15 @@ type turn struct {
 	nextEntrance  direction
 }
 
-var turnMap = map[direction][]turn{
-	north: {{0, -1, east}, {0, 1, west}},
-	east:  {{-1, 0, south}, {1, 0, north}},
-	south: {{0, 1, west}, {0, -1, east}},
-	west:  {{1, 0, north}, {-1, 0, south}},
-}
+var (
+	directions = []direction{north, east, south, west}
+	turnMap    = map[direction][]turn{
+		north: {{0, -1, east}, {0, 1, west}},
+		east:  {{-1, 0, south}, {1, 0, north}},
+		south: {{0, 1, west}, {0, -1, east}},
+		west:  {{1, 0, north}, {-1, 0, south}},
+	}
+)
 
 type node struct {
 	state state
@@ -77,9 +80,8 @@ func (q *queue) enqueue(s state, cost int) {
 }
 
 func (q *queue) dequeue() (state, int) {
-	entry, _ := q.Dequeue()
-	i := entry.(node)
-	return i.state, i.cost
+	i, _ := q.Dequeue()
+	return i.(node).state, i.(node).cost
 }
 
 func findMinCost(network map[state][]node, endRow, endColumn int) int {
@@ -106,31 +108,37 @@ func findMinCost(network map[state][]node, endRow, endColumn int) int {
 	}
 }
 
+func (h heatMap) edges(start state, minSteps, maxSteps int) []node {
+	result := make([]node, 0)
+
+	for s := minSteps; s <= maxSteps; s++ {
+		for _, turn := range turnMap[start.entrance] {
+			newR := start.row + turn.dRow*s
+			newC := start.column + turn.dColumn*s
+			if newR < 0 || newR > len(h)-1 || newC < 0 || newC > len(h[0])-1 {
+				continue
+			}
+
+			end := state{newR, newC, turn.nextEntrance}
+
+			cost := 0
+			for i := 1; i <= s; i++ {
+				cost += h[start.row+turn.dRow*i][start.column+turn.dColumn*i]
+			}
+			result = append(result, node{end, cost})
+		}
+	}
+
+	return result
+}
+
 func (h heatMap) makeNetwork(minSteps, maxSteps int) map[state][]node {
 	result := make(map[state][]node)
 	for r, row := range h {
 		for c := range row {
-			for _, d := range []direction{north, east, south, west} {
+			for _, d := range directions {
 				start := state{r, c, d}
-				result[start] = make([]node, 0)
-
-				for s := minSteps; s <= maxSteps; s++ {
-					for _, turn := range turnMap[d] {
-						newR := r + turn.dRow*s
-						newC := c + turn.dColumn*s
-						if newR < 0 || newR > len(h)-1 || newC < 0 || newC > len(h[0])-1 {
-							continue
-						}
-
-						end := state{newR, newC, turn.nextEntrance}
-
-						cost := 0
-						for i := 1; i <= s; i++ {
-							cost += h[r+turn.dRow*i][c+turn.dColumn*i]
-						}
-						result[start] = append(result[start], node{end, cost})
-					}
-				}
+				result[start] = h.edges(start, minSteps, maxSteps)
 			}
 		}
 	}
