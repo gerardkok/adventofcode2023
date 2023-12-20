@@ -113,13 +113,12 @@ func (h heatMap) edges(start state, minSteps, maxSteps int) []node {
 
 	for s := minSteps; s <= maxSteps; s++ {
 		for _, turn := range turnMap[start.entrance] {
-			newR := start.row + turn.dRow*s
-			newC := start.column + turn.dColumn*s
-			if newR < 0 || newR > len(h)-1 || newC < 0 || newC > len(h[0])-1 {
+			r, c := start.row+turn.dRow*s, start.column+turn.dColumn*s
+			if r < 0 || r > len(h)-1 || c < 0 || c > len(h[0])-1 {
 				continue
 			}
 
-			end := state{newR, newC, turn.nextEntrance}
+			end := state{r, c, turn.nextEntrance}
 
 			cost := 0
 			for i := 1; i <= s; i++ {
