@@ -183,23 +183,11 @@ func (t terrain) isInside(row, column int) bool {
 	return inside
 }
 
-func isCorner(b byte) bool {
-	return b == 'J' || b == 'F' || b == 'L' || b == '7'
-}
-
 func (t terrain) countDugOut(rows, columns []int) int {
 	result := 0
 	for i := range t {
 		for j := range t[i] {
-			v := t[i][j]
-			switch {
-			case isCorner(v):
-				result++
-			case v == '-':
-				result += columns[j]
-			case v == '|':
-				result += rows[i]
-			case t.isInside(i, j):
+			if t[i][j] != '.' || t.isInside(i, j) {
 				result += rows[i] * columns[j]
 			}
 		}
