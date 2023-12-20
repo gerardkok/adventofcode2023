@@ -1,13 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
 	"adventofcode23/internal/day"
 	"adventofcode23/internal/projectpath"
+
+	"golang.org/x/exp/maps"
 )
 
 type Day18 struct {
@@ -19,8 +21,10 @@ func NewDay18(inputFile string) Day18 {
 }
 
 type action struct {
-	direction byte
-	steps     int
+	direction    byte
+	steps        int
+	start, compr coord
+	corner, edge byte
 }
 
 type terrain [][]byte
@@ -28,6 +32,21 @@ type terrain [][]byte
 type turn struct {
 	dRow, dColumn int
 	corner, edge  byte
+}
+
+type coord struct {
+	row, column int
+}
+
+var directionMap = map[string]byte{
+	"U": 'U',
+	"R": 'R',
+	"D": 'D',
+	"L": 'L',
+	"0": 'R',
+	"1": 'D',
+	"2": 'L',
+	"3": 'U',
 }
 
 var turnMap = map[[2]byte]turn{
@@ -41,46 +60,81 @@ var turnMap = map[[2]byte]turn{
 	{'L', 'D'}: {1, 0, 'F', '|'},
 }
 
-func makePlan(lines []string) []action {
+func makePlan1(lines []string) []action {
 	result := make([]action, len(lines))
 	for i, line := range lines {
-		a, _, _ := strings.Cut(line, " (")
-		dStr, sStr, _ := strings.Cut(a, " ")
-		d := byte(dStr[0])
-		s, _ := strconv.Atoi(sStr)
-		result[i] = action{d, s}
+		fields := strings.Fields(line)
+		d := directionMap[fields[0]]
+		s, _ := strconv.Atoi(fields[1])
+		result[i] = action{
+			direction: d,
+			steps:     s,
+		}
 	}
 	return result
 }
 
-func dimensions(plan []action) (rows, columns, startRow, startColumn int) {
-	var up, right, down, left, maxUp, maxRight, maxDown, maxLeft int
-
-	for _, a := range plan {
-		switch a.direction {
-		case 'U':
-			up += a.steps
-			down -= a.steps
-			maxUp = max(up, maxUp)
-		case 'R':
-			right += a.steps
-			left -= a.steps
-			maxRight = max(right, maxRight)
-		case 'D':
-			up -= a.steps
-			down += a.steps
-			maxDown = max(down, maxDown)
-		default:
-			right -= a.steps
-			left += a.steps
-			maxLeft = max(left, maxLeft)
+func makePlan2(lines []string) []action {
+	result := make([]action, len(lines))
+	for i, line := range lines {
+		fields := strings.Fields(line)
+		d := directionMap[string(fields[2][7])]
+		hexSteps, _ := strconv.ParseInt(fields[2][2:7], 16, 64)
+		s := int(hexSteps)
+		result[i] = action{
+			direction: d,
+			steps:     s,
 		}
 	}
+	return result
+}
 
-	rows, columns = maxUp+maxDown+1, maxRight+maxLeft+1
-	startRow, startColumn = maxUp, maxLeft
+func addCoords(plan []action) {
+	r := 0
+	c := 0
+	prevDirection := plan[len(plan)-1].direction
+	for i, a := range plan {
+		turn := turnMap[[2]byte{prevDirection, a.direction}]
+		prevDirection = a.direction
+		plan[i].corner, plan[i].edge = turn.corner, turn.edge
+		plan[i].start = coord{r, c}
+		r, c = r+a.steps*turn.dRow, c+a.steps*turn.dColumn
+	}
+}
 
-	return
+func compressionMap(m map[int]struct{}) (map[int]int, []int) {
+	n := maps.Keys(m)
+	sort.Ints(n)
+	translations := make(map[int]int, len(n))
+
+	for i, j := range n {
+		translations[j] = i
+	}
+	widths := make([]int, len(n)-1)
+	for i, j := 0, 1; i < len(widths); i, j = i+1, j+1 {
+		widths[i] = abs(n[j] - n[i])
+	}
+	return translations, widths
+}
+
+func addComprCoords(plan []action) ([]int, []int) {
+	rows := make(map[int]struct{})
+	columns := make(map[int]struct{})
+	for _, a := range plan {
+		rows[a.start.row] = struct{}{}
+		rows[a.start.row+1] = struct{}{}
+		columns[a.start.column] = struct{}{}
+		columns[a.start.column+1] = struct{}{}
+	}
+
+	comprRows, rowWidths := compressionMap(rows)
+	comprColumns, columnWidths := compressionMap(columns)
+
+	for i, a := range plan {
+		plan[i].compr = coord{comprRows[a.start.row], comprColumns[a.start.column]}
+	}
+
+	return rowWidths, columnWidths
 }
 
 func makeTerrain(rows, columns int) terrain {
@@ -91,18 +145,25 @@ func makeTerrain(rows, columns int) terrain {
 	return result
 }
 
-func (t terrain) dig(startRow, startColumn int, plan []action) {
-	r := startRow
-	c := startColumn
+func abs(i int) int {
+	if i < 0 {
+		return -i
+	}
+	return i
+}
+
+func (t terrain) dig(plan []action) {
+	r := plan[0].compr.row
+	c := plan[0].compr.column
 	prevDirection := plan[len(plan)-1].direction
-	fmt.Printf("prev direction: %c\n", prevDirection)
-	for _, a := range plan {
+	for i, j := 0, 1; i < len(plan); i, j = i+1, (j+1)%len(plan) {
+		a := plan[i]
+		b := plan[j]
 		turn := turnMap[[2]byte{prevDirection, a.direction}]
-		fmt.Printf("turn: %d %d, %c, %c\n", turn.dRow, turn.dColumn, turn.corner, turn.edge)
 		prevDirection = a.direction
 		t[r][c] = turn.corner
 		r, c = r+turn.dRow, c+turn.dColumn
-		for s := 1; s < a.steps; s++ {
+		for !(r == b.compr.row && c == b.compr.column) {
 			t[r][c] = turn.edge
 			r, c = r+turn.dRow, c+turn.dColumn
 		}
@@ -122,13 +183,24 @@ func (t terrain) isInside(row, column int) bool {
 	return inside
 }
 
-func (t terrain) countDug() int {
+func isCorner(b byte) bool {
+	return b == 'J' || b == 'F' || b == 'L' || b == '7'
+}
+
+func (t terrain) countDugOut(rows, columns []int) int {
 	result := 0
 	for i := range t {
 		for j := range t[i] {
-			if t[i][j] != '.' || t.isInside(i, j) {
-				// part of the trench
+			v := t[i][j]
+			switch {
+			case isCorner(v):
 				result++
+			case v == '-':
+				result += columns[j]
+			case v == '|':
+				result += rows[i]
+			case t.isInside(i, j):
+				result += rows[i] * columns[j]
 			}
 		}
 	}
@@ -137,25 +209,28 @@ func (t terrain) countDug() int {
 
 func (d Day18) Part1() int {
 	lines, _ := d.ReadLines()
-	plan := makePlan(lines)
-	rows, columns, startRow, startColumn := dimensions(plan)
-	terrain := makeTerrain(rows, columns)
-	terrain.dig(startRow, startColumn, plan)
+	plan := makePlan1(lines)
+	addCoords(plan)
+	rows, columns := addComprCoords(plan)
+	t := makeTerrain(len(rows), len(columns))
+	t.dig(plan)
 
-	for _, line := range terrain {
-		fmt.Println(string(line))
-	}
-
-	return terrain.countDug()
+	return t.countDugOut(rows, columns)
 }
 
 func (d Day18) Part2() int {
-	return 0
+	lines, _ := d.ReadLines()
+	plan := makePlan2(lines)
+	addCoords(plan)
+	rows, columns := addComprCoords(plan)
+	t := makeTerrain(len(rows), len(columns))
+	t.dig(plan)
+
+	return t.countDugOut(rows, columns)
 }
 
 func main() {
 	d := NewDay18(filepath.Join(projectpath.Root, "cmd", "day18", "input.txt"))
 
-	fmt.Println(d.Part1())
-	// day.Solve(d)
+	day.Solve(d)
 }
