@@ -18,17 +18,24 @@ func NewDay19(inputFile string) Day19 {
 }
 
 const (
-	accepted = "A"
-	rejected = "R"
+	accepted  = "A"
+	rejected  = "R"
+	minRating = 1
+	maxRating = 4000
 )
 
 type part map[byte]int
 
+type interval struct {
+	min, max int // min inclusive, max exclusive
+}
+
+type intervalMap map[byte]interval
+
 type rule struct {
-	category  byte
-	target    string
-	threshold int
-	applies   func(value, threshold int) bool
+	category         byte
+	target           string
+	accepts, rejects interval
 }
 
 type workflows map[string][]rule
@@ -56,21 +63,19 @@ func parseInput(lines []string) (workflows, []part) {
 
 func parseCondition(condition, target string) rule {
 	category := condition[0]
-	applies := func(value, threshold int) bool {
-		return value > threshold
-	}
-	if condition[1] == byte('<') {
-		applies = func(value, threshold int) bool {
-			return value < threshold
-		}
-	}
 	threshold, _ := strconv.Atoi(condition[2:])
+	accepts := interval{threshold + 1, maxRating}
+	rejects := interval{minRating, threshold}
+	if condition[1] == byte('<') {
+		accepts = interval{minRating, threshold - 1}
+		rejects = interval{threshold, maxRating}
+	}
 
 	return rule{
-		category:  category,
-		target:    target,
-		threshold: threshold,
-		applies:   applies,
+		category: category,
+		target:   target,
+		accepts:  accepts,
+		rejects:  rejects,
 	}
 }
 
@@ -79,10 +84,8 @@ func parseRule(r string) rule {
 	if !ok {
 		// just a target
 		return rule{
-			target: r,
-			applies: func(_, _ int) bool {
-				return true
-			},
+			target:  r,
+			accepts: interval{0, 0}, // accept everything
 		}
 	}
 	return parseCondition(condition, target)
@@ -127,6 +130,10 @@ func parseParts(ratings []string) []part {
 	return result
 }
 
+func (r rule) applies(v int) bool {
+	return v >= r.accepts.min && v <= r.accepts.max
+}
+
 func (w workflows) accept(p part, workflow string) bool {
 	if workflow == accepted || workflow == rejected {
 		return workflow == accepted
@@ -134,7 +141,7 @@ func (w workflows) accept(p part, workflow string) bool {
 
 	rules := w[workflow]
 	for _, r := range rules {
-		if r.applies(p[r.category], r.threshold) {
+		if r.applies(p[r.category]) {
 			return w.accept(p, r.target)
 		}
 	}
@@ -147,6 +154,55 @@ func (p part) sum() int {
 		result += v
 	}
 	return result
+}
+
+func (i interval) length() int {
+	if i.min > i.max {
+		return 0
+	}
+	return i.max - i.min + 1
+}
+
+func (i intervalMap) countSolutions() int {
+	result := 1
+	for _, j := range i {
+		result *= j.length()
+	}
+	return result
+}
+
+func intersect(a, b interval) interval {
+	return interval{max(a.min, b.min), min(a.max, b.max)}
+}
+
+func (i intervalMap) clone() intervalMap {
+	result := make(intervalMap, 4)
+	for k, v := range i {
+		result[k] = v
+	}
+	return result
+}
+
+func (w workflows) countSolutions(intervals intervalMap, workflow string) int {
+	switch workflow {
+	case accepted:
+		return intervals.countSolutions()
+	case rejected:
+		return 0
+	}
+
+	count := 0
+
+	rules := w[workflow]
+	for _, r := range rules {
+		cat := intervals[r.category]
+		newIntervals := intervals.clone()
+		newIntervals[r.category] = intersect(cat, r.accepts)
+		intervals[r.category] = intersect(cat, r.rejects)
+		count += w.countSolutions(newIntervals, r.target)
+	}
+
+	return count
 }
 
 func (d Day19) Part1() int {
@@ -165,7 +221,17 @@ func (d Day19) Part1() int {
 }
 
 func (d Day19) Part2() int {
-	return 0
+	lines, _ := d.ReadLines()
+	workflows, _ := parseInput(lines)
+
+	intervals := intervalMap{
+		'x': {minRating, maxRating},
+		'm': {minRating, maxRating},
+		'a': {minRating, maxRating},
+		's': {minRating, maxRating},
+	}
+
+	return workflows.countSolutions(intervals, "in")
 }
 
 func main() {
