@@ -27,7 +27,7 @@ const (
 type part map[byte]int
 
 type interval struct {
-	min, max int // min inclusive, max exclusive
+	min, max int // inclusive
 }
 
 type intervalMap map[byte]interval
@@ -195,10 +195,10 @@ func (w workflows) countSolutions(intervals intervalMap, workflow string) int {
 
 	rules := w[workflow]
 	for _, r := range rules {
-		cat := intervals[r.category]
 		newIntervals := intervals.clone()
-		newIntervals[r.category] = intersect(cat, r.accepts)
-		intervals[r.category] = intersect(cat, r.rejects)
+		catInterval := intervals[r.category]
+		newIntervals[r.category] = intersect(catInterval, r.accepts)
+		intervals[r.category] = intersect(catInterval, r.rejects)
 		count += w.countSolutions(newIntervals, r.target)
 	}
 
