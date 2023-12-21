@@ -1,10 +1,12 @@
 package main
 
 import (
-	"path/filepath"
+	"os"
+	"strings"
+
+	"github.com/cespare/xxhash/v2"
 
 	"adventofcode23/internal/day"
-	"adventofcode23/internal/projectpath"
 )
 
 type Day14b struct {
@@ -26,9 +28,9 @@ func (p *platform) tiltNorth() {
 	for r := 0; r < p.nRows; r++ {
 		for c := 0; c < p.nColumns; c++ {
 			i := r*p.nColumns + c
-			j := north[c]*p.nColumns + c
 			switch p.spots[i] {
 			case 'O':
+				j := north[c]*p.nColumns + c
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
 				north[c]++
 			case '#':
@@ -44,9 +46,9 @@ func (p *platform) tiltWest() {
 	for c := 0; c < p.nColumns; c++ {
 		for r := 0; r < p.nRows; r++ {
 			i := r*p.nColumns + c
-			j := r*p.nColumns + west[r]
 			switch p.spots[i] {
 			case 'O':
+				j := r*p.nColumns + west[r]
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
 				west[r]++
 			case '#':
@@ -65,9 +67,9 @@ func (p *platform) tiltSouth() {
 	for r := p.nRows - 1; r >= 0; r-- {
 		for c := 0; c < p.nColumns; c++ {
 			i := r*p.nColumns + c
-			j := south[c]*p.nColumns + c
 			switch p.spots[i] {
 			case 'O':
+				j := south[c]*p.nColumns + c
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
 				south[c]--
 			case '#':
@@ -86,9 +88,9 @@ func (p *platform) tiltEast() {
 	for c := p.nColumns - 1; c >= 0; c-- {
 		for r := 0; r < p.nRows; r++ {
 			i := r*p.nColumns + c
-			j := r*p.nColumns + east[r]
 			switch p.spots[i] {
 			case 'O':
+				j := r*p.nColumns + east[r]
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
 				east[r]--
 			case '#':
@@ -110,9 +112,10 @@ func (d Day14b) Part1() int {
 func (p platform) load() int {
 	result := 0
 	for r := 0; r < p.nRows; r++ {
+		l := p.nRows - r
 		for c := r * p.nColumns; c < (r+1)*p.nColumns; c++ {
 			if p.spots[c] == 'O' {
-				result += p.nRows - r
+				result += l
 			}
 		}
 	}
@@ -126,22 +129,16 @@ func (p *platform) cycle() {
 	p.tiltEast()
 }
 
-func (p platform) copy() platform {
-	spots := make([]byte, p.nRows*p.nColumns)
-	copy(spots, p.spots)
-	return platform{p.nRows, p.nColumns, spots}
-}
-
-func (p *platform) detectLoop() (int, []platform) {
-	result := make([]platform, 0)
-	seen := make(map[string]int)
+func (p *platform) detectLoop() (int, []int) {
+	loads := make([]int, 0)
+	seen := make(map[uint64]int)
 	for {
-		q := p.copy()
-		if index, ok := seen[string(q.spots)]; ok {
-			return index, result[index:]
+		xxh := xxhash.Sum64(p.spots)
+		if index, ok := seen[xxh]; ok {
+			return index, loads[index:]
 		}
-		seen[string(q.spots)] = len(result)
-		result = append(result, q)
+		seen[xxh] = len(loads)
+		loads = append(loads, p.load())
 		p.cycle()
 	}
 }
@@ -149,15 +146,8 @@ func (p *platform) detectLoop() (int, []platform) {
 func makePlatform(lines []string) platform {
 	nRows := len(lines)
 	nColumns := len(lines[0])
-	spots := make([]byte, nRows*nColumns)
-	for r, line := range lines {
-
-		for c, ch := range line {
-			i := r*nColumns + c
-			spots[i] = byte(ch)
-		}
-	}
-	return platform{nRows, nColumns, spots}
+	spots := strings.Join(lines, "")
+	return platform{nRows, nColumns, []byte(spots)}
 }
 
 func (d Day14b) Part2() int {
@@ -169,11 +159,11 @@ func (d Day14b) Part2() int {
 
 	last := (1000000000 - s) % len(e)
 
-	return e[last].load()
+	return e[last]
 }
 
 func main() {
-	d := NewDay14b(filepath.Join(projectpath.Root, "cmd", "day14", "input.txt"))
+	d := NewDay14b(os.Args[1])
 
 	day.Solve(d)
 }
