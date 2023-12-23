@@ -65,7 +65,7 @@ func parseLines(lines []string) machine {
 		}
 	}
 
-	//connect
+	// identify sources
 	for k, v := range result {
 		for _, dest := range v.destinations {
 			s := result[dest]
@@ -75,26 +75,6 @@ func parseLines(lines []string) machine {
 	}
 
 	return result
-}
-
-func (m moduleType) String() string {
-	switch m {
-	case flipflop:
-		return "flip-flop"
-	case conjunction:
-		return "conjunction"
-	case broadcaster:
-		return "broadcaster"
-	default:
-		return "dummy"
-	}
-}
-
-func (p pulse) String() string {
-	if p.high {
-		return "-high->"
-	}
-	return "-low->"
 }
 
 func (m module) allHigh() bool {
