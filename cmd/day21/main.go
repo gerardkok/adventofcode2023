@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	pq "github.com/emirpasic/gods/queues/priorityqueue"
-	"golang.org/x/exp/maps"
 
 	"adventofcode23/internal/day"
 	"adventofcode23/internal/projectpath"
@@ -14,18 +13,19 @@ import (
 
 type Day21 struct {
 	day.DayInput
+	stepsPart1, stepsPart2 int
 }
 
-func NewDay21(inputFile string) Day21 {
-	return Day21{day.DayInput(inputFile)}
+func NewDay21(inputFile string, stepsPart1, stepsPart2 int) Day21 {
+	return Day21{day.DayInput(inputFile), stepsPart1, stepsPart2}
 }
 
 type garden struct {
 	plots [][]byte
-	start node
+	start plot
 }
 
-type node struct {
+type plot struct {
 	row, column int
 }
 
@@ -33,151 +33,138 @@ type move struct {
 	dRow, dColumn int
 }
 
-type entry struct {
-	node node
-	cost int
+type node struct {
+	plot     plot
+	distance int
 }
 
 type queue struct {
 	*pq.Queue
 }
 
-type visited map[node]bool
+type visited map[plot]struct{}
 
 var neigbourMoves = []move{{0, -1}, {-1, 0}, {0, 1}, {1, 0}}
 
 func newQueue() queue {
 	q := pq.NewWith(func(a, b any) int {
-		return a.(entry).cost - b.(entry).cost
+		return a.(node).distance - b.(node).distance
 	})
 	return queue{q}
 }
 
-func (q *queue) enqueue(n node, cost int) {
-	i := entry{n, cost}
+func (q *queue) enqueue(p plot, distance int) {
+	i := node{p, distance}
 	q.Enqueue(i)
 }
 
-func (q *queue) dequeue() (node, int) {
+func (q *queue) dequeue() (plot, int) {
 	i, _ := q.Dequeue()
-	return i.(entry).node, i.(entry).cost
+	return i.(node).plot, i.(node).distance
 }
 
 func (q *queue) empty() bool {
 	return q.Empty()
 }
 
-func findReachable(network map[node][]node, start node, limit int) int {
+func odd(n int) bool {
+	return n%2 == 1
+}
+
+func (g garden) findReachable(start plot, steps, nCycles int) []int {
+	height := len(g.plots)
+	cycle := steps % height
+	parity := cycle % 2
+
 	q := newQueue()
 	q.enqueue(start, 0)
 	v := make(visited)
 	reachable := 0
 
+	result := make([]int, 0)
+
 	for !q.empty() {
-		n, cost := q.dequeue()
-		if cost > limit {
-			return reachable
+		p, distance := q.dequeue()
+		if distance > cycle {
+			cycle += height
+			r := reachable
+			if odd(len(result)) {
+				r = len(v) - reachable
+			}
+			result = append(result, r)
+			if len(result) == nCycles {
+				return result
+			}
 		}
 
-		if v[n] {
+		if _, ok := v[p]; ok {
 			continue
 		}
 
-		v[n] = true
-		fmt.Printf("increasing reachable for node: %s\n", n)
-		reachable++
+		v[p] = struct{}{}
+		if distance%2 == parity {
+			reachable++
+		}
 
-		for _, newNode := range network[n] {
-			q.enqueue(newNode, cost+2)
+		for _, m := range neigbourMoves {
+			newPlot := plot{p.row + m.dRow, p.column + m.dColumn}
+			r := (newPlot.row%height + height) % height
+			c := (newPlot.column%height + height) % height
+			if g.plots[r][c] == '#' {
+				continue
+			}
+
+			q.enqueue(newPlot, distance+1)
 		}
 	}
-	return reachable
+	return nil
 }
 
 func makeGarden(lines []string) garden {
 	plots := make([][]byte, len(lines))
-	var start node
+	var start plot
 	for r, line := range lines {
 		plots[r] = []byte(line)
 		c := strings.Index(line, "S")
 		if c != -1 {
-			start = node{r, c}
+			start = plot{r, c}
 		}
 	}
 	return garden{plots, start}
 }
 
-func (g garden) neighbours(n node) map[node]struct{} {
-	result := make(map[node]struct{})
-	for _, m := range neigbourMoves {
-		r, c := n.row+m.dRow, n.column+m.dColumn
-		if r < 0 || r > len(g.plots)-1 || c < 0 || c > len(g.plots[0])-1 {
-			continue
-		}
-		if g.plots[r][c] == '#' {
-			continue
-		}
-		neighbour := node{r, c}
-		result[neighbour] = struct{}{}
-	}
-	return result
-}
-
-func (g garden) nextNeighbours(n node) map[node]struct{} {
-	result := make(map[node]struct{})
-	neighbours := g.neighbours(n)
-	for m := range neighbours {
-		nextNeighbours := g.neighbours(m)
-		for k := range nextNeighbours {
-			result[k] = struct{}{}
-		}
-	}
-	delete(result, n)
-	return result
-}
-
-func (g garden) makeNetwork(start node) map[node][]node {
-	result := make(map[node][]node, 0)
-	alt := ((start.row + start.column) % 2) + 1
-	for r, row := range g.plots {
-		alt = (alt + 1) % 2
-		for c := alt; c < len(row); c += 2 {
-			if g.plots[r][c] == '#' {
-				continue
-			}
-			n := node{r, c}
-			neighbours := g.nextNeighbours(n)
-			result[n] = maps.Keys(neighbours)
-		}
-	}
-	return result
-}
-
-func (n node) String() string {
+func (n plot) String() string {
 	return fmt.Sprintf("(%d, %d)", n.row, n.column)
 }
 
 func (d Day21) Part1() int {
 	lines, _ := d.ReadLines()
 	garden := makeGarden(lines)
-	network := garden.makeNetwork(garden.start)
 
-	for k, v := range network {
-		neighbours := make([]string, len(v))
-		for i, n := range v {
-			neighbours[i] = fmt.Sprint(n)
-		}
-		fmt.Printf("%s: [%s]\n", k, strings.Join(neighbours, ", "))
-	}
-	return findReachable(network, garden.start, 64)
+	return garden.findReachable(garden.start, d.stepsPart1, 1)[0]
+}
+
+func lagrangeInterpolation(y0, y1, y2 int) (int, int, int) {
+	a := y0/2 - y1 + y2/2
+	b := -3*(y0/2) + 2*y1 - y2/2
+	c := y0
+	return a, b, c
 }
 
 func (d Day21) Part2() int {
-	return 0
+	lines, _ := d.ReadLines()
+	garden := makeGarden(lines)
+
+	iterations := garden.findReachable(garden.start, d.stepsPart2, 3)
+
+	a, b, c := lagrangeInterpolation(iterations[2], iterations[1], iterations[0])
+	x := d.stepsPart2 / len(garden.plots)
+
+	return a*x*x + b*x + c
 }
 
 func main() {
-	d := NewDay21(filepath.Join(projectpath.Root, "cmd", "day21", "input.txt"))
+	d := NewDay21(filepath.Join(projectpath.Root, "cmd", "day21", "input.txt"), 64, 26501365)
 
 	day.Solve(d)
 }
