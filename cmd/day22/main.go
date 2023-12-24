@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -91,45 +90,6 @@ func (b brick) occupies() []coord {
 	return result
 }
 
-func (c coord) String() string {
-	return fmt.Sprintf("%d,%d,%d", c[x], c[y], c[z])
-}
-
-func (a axis) String() string {
-	switch a {
-	case x:
-		return "x"
-	case y:
-		return "y"
-	case z:
-		return "z"
-	default:
-		return "unknown"
-	}
-}
-
-func (b brick) String() string {
-	occupies := b.occupies()
-	occupiesStr := make([]string, len(occupies))
-	for i, o := range occupies {
-		occupiesStr[i] = fmt.Sprintf("(%s)", o)
-	}
-	return fmt.Sprintf("%s~%s, orientation: %s, length: %d, occupies: [%s]", b.start, b.end, b.orientation(), b.length(), strings.Join(occupiesStr, ","))
-}
-
-func equalCoords(a, b coord) bool {
-	for k, v := range a {
-		if v != b[k] {
-			return false
-		}
-	}
-	return true
-}
-
-func equalBricks(a, b brick) bool {
-	return equalCoords(a.start, b.start) && equalCoords(a.end, b.end)
-}
-
 func (b brick) top() []coord {
 	if b.orientation() == z {
 		return []coord{b.end}
@@ -138,7 +98,7 @@ func (b brick) top() []coord {
 	return b.occupies()
 }
 
-func (b brick) lower(to int) (brick, []coord) {
+func (b brick) lower(to int) brick {
 	start := coord{x: b.start[x], y: b.start[y], z: to}
 	end := coord{x: b.end[x], y: b.end[y], z: to}
 
@@ -147,26 +107,25 @@ func (b brick) lower(to int) (brick, []coord) {
 		end = coord{x: b.end[x], y: b.end[y], z: to + b.length() - 1}
 	}
 
-	n := brick{start, end}
-	return n, n.top()
+	return brick{start, end}
+}
+
+func (zb *zBuffer) maxZ(b brick) int {
+	result := 0
+	for _, c := range b.occupies() {
+		result = max(result, (*zb)[c[x]][c[y]])
+	}
+	return result
 }
 
 func compact(bricks []brick) []brick {
-	zbuffer := make([][]int, maxAxis(bricks, x)+1)
-	for i := range zbuffer {
-		zbuffer[i] = make([]int, maxAxis(bricks, y)+1)
-	}
-
+	zb := makeZBuffer(maxAxis(bricks, x)+1, maxAxis(bricks, y)+1)
 	result := make([]brick, len(bricks))
 	for i, b := range bricks {
-		highestZ := 0
-		for _, c := range b.occupies() {
-			highestZ = max(highestZ, zbuffer[c[x]][c[y]])
-		}
-		newB, newZ := b.lower(highestZ + 1)
-		result[i] = newB
-		for _, c := range newZ {
-			zbuffer[c[x]][c[y]] = c[z]
+		maxZ := zb.maxZ(b)
+		result[i] = b.lower(maxZ + 1)
+		for _, c := range result[i].top() {
+			zb[c[x]][c[y]] = c[z]
 		}
 	}
 	return result
@@ -191,22 +150,18 @@ func (zb zBuffer) clone() zBuffer {
 
 func (zb *zBuffer) countFalling(bricks []brick, layer int) int {
 	result := 0
-	localZ := zb.clone()
+	localZb := zb.clone()
 
 	for i := layer + 1; i < len(bricks); i++ {
 		b := bricks[i]
-		highestZ := 0
-		for _, c := range b.occupies() {
-			highestZ = max(highestZ, localZ[c[x]][c[y]])
-		}
+		maxZ := localZb.maxZ(b)
+		newB := b.lower(maxZ + 1)
 
-		newB, newZ := b.lower(highestZ + 1)
-
-		if !equalBricks(b, newB) {
+		if newB.end[z] < b.end[z] {
 			result++
 		}
-		for _, c := range newZ {
-			localZ[c[x]][c[y]] = c[z]
+		for _, c := range newB.top() {
+			localZb[c[x]][c[y]] = c[z]
 		}
 	}
 
@@ -261,11 +216,6 @@ func (d Day22) Part1() int {
 
 	compacted := compact(bricks)
 
-	// sort on z
-	sort.Slice(compacted, func(i, j int) bool {
-		return compacted[i].start[z] < compacted[j].start[z]
-	})
-
 	return countDisintegratable(compacted)
 }
 
@@ -279,11 +229,6 @@ func (d Day22) Part2() int {
 	})
 
 	compacted := compact(bricks)
-
-	// sort on z
-	sort.Slice(compacted, func(i, j int) bool {
-		return compacted[i].start[z] < compacted[j].start[z]
-	})
 
 	return countFalling(compacted)
 }
