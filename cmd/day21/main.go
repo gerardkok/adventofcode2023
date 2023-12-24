@@ -145,8 +145,8 @@ func (d Day21) Part1() int {
 }
 
 func lagrangeInterpolation(y0, y1, y2 int) (int, int, int) {
-	a := y0/2 - y1 + y2/2
-	b := -3*(y0/2) + 2*y1 - y2/2
+	a := (y2 - (2 * y1) + y0) / 2
+	b := y1 - y0 - a
 	c := y0
 	return a, b, c
 }
@@ -157,7 +157,7 @@ func (d Day21) Part2() int {
 
 	iterations := garden.findReachable(garden.start, d.stepsPart2, 3)
 
-	a, b, c := lagrangeInterpolation(iterations[2], iterations[1], iterations[0])
+	a, b, c := lagrangeInterpolation(iterations[0], iterations[1], iterations[2])
 	x := d.stepsPart2 / len(garden.plots)
 
 	return a*x*x + b*x + c
