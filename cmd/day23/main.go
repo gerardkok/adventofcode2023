@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/exp/maps"
+
 	"adventofcode23/internal/day"
 	"adventofcode23/internal/projectpath"
-
-	"golang.org/x/exp/maps"
 )
 
 type Day23 struct {
@@ -16,8 +15,9 @@ type Day23 struct {
 }
 
 type area struct {
-	neighbours map[tile][]tile
-	start, end tile
+	neighbours    map[tile][]tile
+	intersections []tile // includes start, end
+	start, end    tile
 }
 
 type tile struct {
@@ -61,6 +61,7 @@ func parseTiles(input []string) [][]byte {
 
 func makeArea(tiles [][]byte, moves func(byte) []move) area {
 	neighbours := make(map[tile][]tile)
+	intersections := make([]tile, 0)
 	var start, end tile
 
 	for r, row := range tiles {
@@ -73,35 +74,27 @@ func makeArea(tiles [][]byte, moves func(byte) []move) area {
 				}
 				neighbours[t] = append(neighbours[t], tile{r + m.dRow, c + m.dColumn})
 			}
-			if ch == '.' {
-				switch r {
-				case 1:
-					start = t
-				case len(tiles) - 2:
-					end = t
-				}
+			if len(neighbours[t]) > 2 {
+				intersections = append(intersections, t)
+			}
+			if r == 1 && ch == '.' {
+				start = t
+			} else if r == len(tiles)-2 && ch == '.' {
+				end = t
 			}
 		}
 	}
-	return area{neighbours, start, end}
+
+	intersections = append(append(intersections, start), end)
+	return area{neighbours, intersections, start, end}
 }
 
-func (a area) intersections() []tile {
-	result := []tile{a.start, a.end}
-	for k, v := range a.neighbours {
-		if len(v) > 2 {
-			result = append(result, k)
-		}
-	}
-	return result
-}
-
-func (a area) neighbourIntersections(e edge, intersections []tile, exclude int, seen map[tile]struct{}) []edge {
-	for i := range intersections {
+func (a area) neighbourIntersections(e edge, exclude int, seen map[tile]struct{}) []edge {
+	for i := range a.intersections {
 		if i == exclude {
 			continue
 		}
-		if intersections[i] == e.to {
+		if a.intersections[i] == e.to {
 			return []edge{e}
 		}
 	}
@@ -112,19 +105,18 @@ func (a area) neighbourIntersections(e edge, intersections []tile, exclude int, 
 		if _, ok := seen[n]; ok {
 			continue
 		}
-		edges := a.neighbourIntersections(edge{n, e.distance + 1}, intersections, exclude, seen)
+		edges := a.neighbourIntersections(edge{n, e.distance + 1}, exclude, seen)
 		result = append(result, edges...)
 	}
 	return result
 }
 
 func (a area) makeGraph() graph {
-	intersections := a.intersections()
-	edges := make(map[tile][]edge, len(intersections))
+	edges := make(map[tile][]edge, len(a.intersections))
 
-	for i, intersection := range intersections {
+	for i, intersection := range a.intersections {
 		seen := make(map[tile]struct{})
-		edges[intersection] = a.neighbourIntersections(edge{intersection, 0}, intersections, i, seen)
+		edges[intersection] = a.neighbourIntersections(edge{intersection, 0}, i, seen)
 	}
 	return graph{edges, a.start, a.end}
 }
@@ -149,26 +141,6 @@ func (g graph) bfs(e edge, end tile, seen map[tile]struct{}) []int {
 	return result
 }
 
-func printEdgeSlice(v []edge) string {
-	n := make([]string, len(v))
-	for i, w := range v {
-		n[i] = fmt.Sprintf("%s: %d", w.to, w.distance)
-	}
-	return strings.Join(n, ", ")
-}
-
-func (g graph) String() string {
-	b := make([]string, len(g.edges))
-	j := 0
-	for k, v := range g.edges {
-		b[j] = fmt.Sprintf("%s: [%s]", k, printEdgeSlice(v))
-		j++
-	}
-	edges := strings.Join(b, "\n")
-
-	return fmt.Sprintf("edges:\n%s\nstart: %s, end: %s\n", edges, g.start, g.end)
-}
-
 func (g graph) maxDistance() int {
 	seen := make(map[tile]struct{})
 
@@ -179,30 +151,6 @@ func (g graph) maxDistance() int {
 		result = max(d, result)
 	}
 	return result
-}
-
-func (t tile) String() string {
-	return fmt.Sprintf("(%d,%d)", t.row, t.column)
-}
-
-func printTileSlice(s []tile) string {
-	n := make([]string, len(s))
-	for i, w := range s {
-		n[i] = w.String()
-	}
-	return strings.Join(n, ",")
-}
-
-func (a area) String() string {
-	b := make([]string, len(a.neighbours))
-	j := 0
-	for k, v := range a.neighbours {
-		b[j] = fmt.Sprintf("%s: [%s]", k, printTileSlice(v))
-		j++
-	}
-	adjacencies := strings.Join(b, "\n")
-
-	return fmt.Sprintf("adjancencies:\n%s\nstart: %s, end: %s\n", adjacencies, a.start, a.end)
 }
 
 func (d Day23) Part1() int {
