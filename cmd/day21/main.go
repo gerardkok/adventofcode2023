@@ -1,11 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
-
-	pq "github.com/emirpasic/gods/queues/priorityqueue"
 
 	"adventofcode23/internal/day"
 	"adventofcode23/internal/projectpath"
@@ -33,91 +30,58 @@ type move struct {
 	dRow, dColumn int
 }
 
-type node struct {
-	plot     plot
-	distance int
-}
+var moves = []move{{0, -1}, {-1, 0}, {0, 1}, {1, 0}}
 
-type queue struct {
-	*pq.Queue
-}
-
-type visited map[plot]struct{}
-
-var neigbourMoves = []move{{0, -1}, {-1, 0}, {0, 1}, {1, 0}}
-
-func newQueue() queue {
-	q := pq.NewWith(func(a, b any) int {
-		return a.(node).distance - b.(node).distance
-	})
-	return queue{q}
-}
-
-func (q *queue) enqueue(p plot, distance int) {
-	i := node{p, distance}
-	q.Enqueue(i)
-}
-
-func (q *queue) dequeue() (plot, int) {
-	i, _ := q.Dequeue()
-	return i.(node).plot, i.(node).distance
-}
-
-func (q *queue) empty() bool {
-	return q.Empty()
-}
-
-func odd(n int) bool {
-	return n%2 == 1
-}
-
-func (g garden) findReachable(start plot, steps, nCycles int) []int {
-	height := len(g.plots)
-	cycle := steps % height
-	parity := cycle % 2
-
-	q := newQueue()
-	q.enqueue(start, 0)
-	v := make(visited)
-	reachable := 0
-
-	result := make([]int, 0)
-
-	for !q.empty() {
-		p, distance := q.dequeue()
-		if distance > cycle {
-			cycle += height
-			r := reachable
-			if odd(len(result)) {
-				r = len(v) - reachable
-			}
-			result = append(result, r)
-			if len(result) == nCycles {
-				return result
-			}
-		}
-
-		if _, ok := v[p]; ok {
-			continue
-		}
-
-		v[p] = struct{}{}
-		if distance%2 == parity {
-			reachable++
-		}
-
-		for _, m := range neigbourMoves {
-			newPlot := plot{p.row + m.dRow, p.column + m.dColumn}
-			r := (newPlot.row%height + height) % height
-			c := (newPlot.column%height + height) % height
-			if g.plots[r][c] == '#' {
-				continue
-			}
-
-			q.enqueue(newPlot, distance+1)
-		}
+func parity(todo map[plot]struct{}) int {
+	for k := range todo {
+		return (((k.row + k.column) % 2) + 2) % 2
 	}
-	return nil
+	return -1
+}
+
+func (g garden) isRock(p plot) bool {
+	r := (p.row%len(g.plots) + len(g.plots)) % len(g.plots)
+	c := (p.column%len(g.plots[0]) + len(g.plots[0])) % len(g.plots[0])
+	return g.plots[r][c] == '#'
+}
+
+func (g garden) countReachable(start plot, cycles []int) []int {
+	result := make([]int, len(cycles))
+
+	seen := [2]map[plot]struct{}{{}, {}} // seen plots per parity
+	startStep := 0
+	todo := map[plot]struct{}{start: {}}
+
+	for i := 0; i < len(cycles); i++ {
+		var par int
+
+		for step := startStep; step <= cycles[i]; step++ {
+			par = parity(todo)
+			todoNextStep := make(map[plot]struct{})
+
+			for p := range todo {
+				if _, ok := seen[par][p]; ok {
+					continue
+				}
+
+				seen[par][p] = struct{}{}
+
+				for _, m := range moves {
+					q := plot{p.row + m.dRow, p.column + m.dColumn}
+					if g.isRock(q) {
+						continue
+					}
+					todoNextStep[q] = struct{}{}
+				}
+			}
+
+			todo = todoNextStep
+		}
+
+		result[i] = len(seen[par])
+		startStep = cycles[i] + 1
+	}
+	return result
 }
 
 func makeGarden(lines []string) garden {
@@ -133,15 +97,11 @@ func makeGarden(lines []string) garden {
 	return garden{plots, start}
 }
 
-func (n plot) String() string {
-	return fmt.Sprintf("(%d, %d)", n.row, n.column)
-}
-
 func (d Day21) Part1() int {
 	lines, _ := d.ReadLines()
 	garden := makeGarden(lines)
 
-	return garden.findReachable(garden.start, d.stepsPart1, 1)[0]
+	return garden.countReachable(garden.start, []int{d.stepsPart1})[0]
 }
 
 func lagrangeInterpolation(y0, y1, y2 int) (int, int, int) {
@@ -155,7 +115,13 @@ func (d Day21) Part2() int {
 	lines, _ := d.ReadLines()
 	garden := makeGarden(lines)
 
-	iterations := garden.findReachable(garden.start, d.stepsPart2, 3)
+	nCycles := 3
+	cycles := make([]int, nCycles)
+	for i := 0; i < nCycles; i++ {
+		cycles[i] = d.stepsPart2%len(garden.plots) + i*len(garden.plots)
+	}
+
+	iterations := garden.countReachable(garden.start, cycles)
 
 	a, b, c := lagrangeInterpolation(iterations[0], iterations[1], iterations[2])
 	x := d.stepsPart2 / len(garden.plots)
