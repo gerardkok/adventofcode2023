@@ -22,11 +22,6 @@ type equation struct {
 	a, b, c int
 }
 
-// type equationOldStyle struct {
-// 	// y = ax + b
-// 	a, b float64
-// }
-
 type plane int
 
 const (
@@ -89,31 +84,12 @@ func (h hailstone) projection(p plane) equation {
 	return equation{a, b, c}
 }
 
-// func (h hailstone) projectionOldStyle(p plane) equationOldStyle {
-// 	ax1 := projectionMap[p][0]
-// 	ax2 := projectionMap[p][1]
-// 	a := float64(h.velocity[ax2]) / float64(h.velocity[ax1])
-// 	b := float64(h.position[ax2]) - (a * float64(h.position[ax1]))
-// 	return equationOldStyle{a, b}
-// }
-
 func d(f, g equation) int {
 	return g.b*f.a - f.b*g.a
 }
 
 func parallel(f, g equation) bool {
 	return d(f, g) == 0
-}
-
-// func parallelOldStyle(f, g equationOldStyle) bool {
-// 	return f.a == g.a
-// }
-
-func (h hailstone) positionAtTime(nanosec int) (int, int, int) {
-	xPos := h.velocity[x]*nanosec + h.position[x]
-	yPos := h.velocity[y]*nanosec + h.position[y]
-	zPos := h.velocity[z]*nanosec + h.position[z]
-	return xPos, yPos, zPos
 }
 
 func (h hailstone) timeAtPosition(pos float64, p plane) float64 {
@@ -124,20 +100,6 @@ func (h hailstone) inPast(xIntersect float64, p plane) bool {
 	ax1 := projectionMap[p][0]
 	return h.timeAtPosition(xIntersect, ax1) < 0
 }
-
-// func (h hailstone) inPastOldStyle(xIntersect float64, p plane) bool {
-// 	ax1 := projectionMap[p][0]
-// 	return (h.velocity[ax1] > 0 && xIntersect < float64(h.position[ax1])) ||
-// 		(h.velocity[ax1] < 0 && xIntersect > float64(h.position[ax1]))
-// }
-
-// func (h hailstone) inPastYZ(x float64) bool {
-// 	return (h.vy > 0 && x < float64(h.py)) || (h.vy < 0 && x > float64(h.py))
-// }
-
-// func (f equation) apply(x float64) float64 {
-// 	return f.a*x + f.b
-// }
 
 func intersection(a, b hailstone, p plane) (float64, float64) {
 	fa := a.projection(p)
@@ -161,53 +123,6 @@ func intersection(a, b hailstone, p plane) (float64, float64) {
 	return xIntersect, yIntersect
 }
 
-// func (f equationOldStyle) apply(x float64) float64 {
-// 	return f.a*x + f.b
-// }
-
-// func intersectionOldStyle(a, b hailstone, p plane) (float64, float64) {
-// 	fa := a.projectionOldStyle(p)
-// 	fb := b.projectionOldStyle(p)
-
-// 	if parallelOldStyle(fa, fb) {
-// 		fmt.Println("old parallel")
-// 		return -1, -1
-// 	}
-
-// 	// a and b intersect at x
-// 	x := (fb.b - fa.b) / (fa.a - fb.a)
-
-// 	if a.inPastOldStyle(x, p) || b.inPastOldStyle(x, p) {
-// 		fmt.Println("old in past")
-// 		return -1, -1
-// 	}
-
-// 	return x, fa.apply(x)
-// }
-
-// func intersectionYZ(a, b hailstone) (float64, float64) {
-// 	fa := projectionYZ(a)
-// 	fb := projectionYZ(b)
-
-// 	//fmt.Printf("fa: %v, fb: %v\n", fa, fb)
-
-// 	if parallel(fa, fb) {
-// 		return -1, -1
-// 	}
-
-// 	// a and b intersect at x
-// 	x := (fb.b - fa.b) / (fa.a - fb.a)
-// 	if math.IsNaN(x) {
-// 		return -1, -1
-// 	}
-
-// 	if a.inPastYZ(x) || b.inPastYZ(x) {
-// 		return -1, -1
-// 	}
-
-// 	return x, fa.apply(x)
-// }
-
 func (h hailstone) String() string {
 	return fmt.Sprintf("%d, %d, %d @ %d, %d, %d", h.position[x], h.position[y], h.position[z], h.velocity[x], h.velocity[y], h.velocity[z])
 }
@@ -225,7 +140,7 @@ func countIntersections(hailstones []hailstone, lower, upper float64) int {
 	return result
 }
 
-func intersectingVelocities(rvx, rvy int, p plane, hailstones []hailstone) bool {
+func intersectingVelocities(rvx, rvy int, p plane, hailstones []hailstone) (hailstone, bool) {
 	type coord struct {
 		x, y int
 	}
@@ -251,73 +166,43 @@ func intersectingVelocities(rvx, rvy int, p plane, hailstones []hailstone) bool 
 			if x == -1 && y == -1 {
 				continue
 			}
-			//fmt.Printf("intersection: %d, %d\n", int(x), int(y))
 			intersectionMap[coord{int(x), int(y)}]++
 			if intersectionMap[coord{int(x), int(y)}] > 5 {
-				fmt.Printf("rvx: %d, x: %f, y: %f\n", -rvx, x, y)
-				return true
+				hPosition := map[plane]int{
+					ax1: int(x),
+					ax2: int(y),
+				}
+				hVelocity := map[plane]int{
+					ax1: -rvx,
+					ax2: -rvy,
+				}
+				return hailstone{hPosition, hVelocity}, true
 			} else if len(intersectionMap) > 5 {
-				return false
+				return hailstone{}, false
 			}
 		}
 	}
-	return false
+	return hailstone{}, false
 }
 
-// func intersectingVelocitiesYZ(rvy, rvz int, hailstones []hailstone) bool {
-// 	type coord struct {
-// 		x, y int
-// 	}
-// 	intersectionMap := make(map[coord]int)
-// 	for i, a := range hailstones {
-// 		relA := hailstone{a.px, a.py, a.pz, a.vx, a.vy + rvy, a.vz + rvz}
-// 		for j := i + 1; j < len(hailstones); j++ {
-// 			b := hailstones[j]
-// 			relB := hailstone{b.px, b.py, b.pz, b.vx, b.vy + rvy, b.vz + rvz}
-// 			x, y := intersectionYZ(relA, relB)
-// 			if x == -1 && y == -1 {
-// 				continue
-// 			}
-// 			//fmt.Printf("intersection: %d, %d\n", int(x), int(y))
-// 			intersectionMap[coord{int(x), int(y)}]++
-// 			if intersectionMap[coord{int(x), int(y)}] > 5 {
-// 				fmt.Printf("x: %d, y: %d\n", int(x), int(y))
-// 				return true
-// 			} else if len(intersectionMap) > 5 {
-// 				return false
-// 			}
-// 		}
-// 	}
-// 	return false
-// }
-
-func findRock(hailstones []hailstone) hailstone {
-
+func findRockProjection(hailstones []hailstone, p plane) hailstone {
 	for rvx := -400; rvx < 400; rvx++ {
 		for rvy := -400; rvy < 400; rvy++ {
-			if intersectingVelocities(rvx, rvy, z, hailstones) {
-				fmt.Printf("rvx: %d, rvy: %d\n", rvx, rvy)
-				//return hailstone{}
-			}
-		}
-	}
-	for rvy := -400; rvy < 400; rvy++ {
-		for rvz := -400; rvz < 400; rvz++ {
-			if intersectingVelocities(rvy, rvz, x, hailstones) {
-				fmt.Printf("rvy: %d, rvz: %d\n", rvy, rvz)
-				//return hailstone{}
-			}
-		}
-	}
-	for rvx := -400; rvx < 400; rvx++ {
-		for rvz := -400; rvz < 400; rvz++ {
-			if intersectingVelocities(rvx, rvz, y, hailstones) {
-				fmt.Printf("rvx: %d, rvz: %d\n", rvx, rvz)
-				//return hailstone{}
+			result, found := intersectingVelocities(rvx, rvy, p, hailstones)
+			if found {
+				return result
 			}
 		}
 	}
 	return hailstone{}
+}
+
+func findRock(hailstones []hailstone) hailstone {
+	result := findRockProjection(hailstones, z)
+	h := findRockProjection(hailstones, x)
+	result.position[z] = h.position[z]
+	result.velocity[z] = h.velocity[z]
+	return result
 }
 
 func (d Day24) Part1() int {
@@ -331,14 +216,13 @@ func (d Day24) Part2() int {
 	lines, _ := d.ReadLines()
 	hailstones := parseLines(lines)
 
-	_ = findRock(hailstones)
+	rock := findRock(hailstones)
 
-	return 0
+	return rock.position[x] + rock.position[y] + rock.position[z]
 }
 
 func main() {
 	d := NewDay24(filepath.Join(projectpath.Root, "cmd", "day24", "input.txt"), 2e14, 4e14)
 
-	//day.Solve(d)
-	fmt.Println(d.Part2())
+	day.Solve(d)
 }
