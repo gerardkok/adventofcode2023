@@ -54,10 +54,10 @@ func newBrick(start, end coord) brick {
 
 	for i := 0; i < length; i++ {
 		occupies[i] = make(coord)
-		for a := range start {
-			occupies[i][a] = start[a]
-			if a == o {
-				occupies[i][a] = start[a] + i
+		for ax := range start {
+			occupies[i][ax] = start[ax]
+			if ax == o {
+				occupies[i][ax] += i
 			}
 		}
 	}
@@ -110,7 +110,7 @@ func (b brick) lower(to int) {
 	for i := range b.occupies {
 		b.occupies[i][z] = to
 		if b.vertical {
-			b.occupies[i][z] = to + i
+			b.occupies[i][z] += i
 		}
 	}
 }
