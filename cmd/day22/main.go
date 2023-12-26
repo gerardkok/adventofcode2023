@@ -164,9 +164,10 @@ func (zb *zBuffer) countFalling(bricks []brick, layer int) int {
 	localZb := zb.clone()
 
 	for i := layer + 1; i < len(bricks); i++ {
-		b := bricks[i].clone()
+		b := bricks[i]
 		lowerableTo := localZb.maxZ(b) + 1
 		if lowerableTo < b.start()[z] {
+			b = bricks[i].clone()
 			b.lower(lowerableTo)
 			result++
 		}
