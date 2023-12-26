@@ -32,17 +32,19 @@ type move struct {
 
 var moves = []move{{0, -1}, {-1, 0}, {0, 1}, {1, 0}}
 
-func parity(todo map[plot]struct{}) int {
-	for k := range todo {
-		return (((k.row + k.column) % 2) + 2) % 2
-	}
-	return -1
-}
-
 func (g garden) isRock(p plot) bool {
 	r := (p.row%len(g.plots) + len(g.plots)) % len(g.plots)
 	c := (p.column%len(g.plots[0]) + len(g.plots[0])) % len(g.plots[0])
 	return g.plots[r][c] == '#'
+}
+
+func (p plot) neighbours() []plot {
+	result := make([]plot, 0)
+	for _, m := range moves {
+		q := plot{p.row + m.dRow, p.column + m.dColumn}
+		result = append(result, q)
+	}
+	return result
 }
 
 func (g garden) countReachable(start plot, cycles []int) []int {
@@ -53,21 +55,20 @@ func (g garden) countReachable(start plot, cycles []int) []int {
 	todo := map[plot]struct{}{start: {}}
 
 	for i := 0; i < len(cycles); i++ {
-		var par int
+		var parity int
 
 		for step := startStep; step <= cycles[i]; step++ {
-			par = parity(todo)
+			parity = step % 2
 			todoNextStep := make(map[plot]struct{})
 
 			for p := range todo {
-				if _, ok := seen[par][p]; ok {
+				if _, ok := seen[parity][p]; ok {
 					continue
 				}
 
-				seen[par][p] = struct{}{}
+				seen[parity][p] = struct{}{}
 
-				for _, m := range moves {
-					q := plot{p.row + m.dRow, p.column + m.dColumn}
+				for _, q := range p.neighbours() {
 					if g.isRock(q) {
 						continue
 					}
@@ -78,9 +79,10 @@ func (g garden) countReachable(start plot, cycles []int) []int {
 			todo = todoNextStep
 		}
 
-		result[i] = len(seen[par])
+		result[i] = len(seen[parity])
 		startStep = cycles[i] + 1
 	}
+
 	return result
 }
 
