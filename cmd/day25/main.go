@@ -63,13 +63,6 @@ func union(subsets map[string]subset, x, y string) {
 	subsets[yroot] = b
 }
 
-func (g graph) addEdge(src, dest string) {
-	if src > dest {
-		src, dest = dest, src
-	}
-	g.edges[edge{src, dest}] = struct{}{}
-}
-
 func parseGraph(lines []string) graph {
 	result := graph{
 		vertices: make(map[string]struct{}),
@@ -81,7 +74,7 @@ func parseGraph(lines []string) graph {
 		connections := strings.Split(c, " ")
 		for _, connection := range connections {
 			result.vertices[connection] = struct{}{}
-			result.addEdge(component, connection)
+			result.edges[edge{component, connection}] = struct{}{}
 		}
 	}
 	return result
