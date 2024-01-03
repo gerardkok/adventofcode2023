@@ -82,13 +82,14 @@ func max_element(s []int) int {
 }
 
 func (m *matrix) globalMinCut() (int, []int) {
+	// adapted from https://en.wikipedia.org/wiki/Stoer%E2%80%93Wagner_algorithm
 	bestCut := math.MaxInt
 	bestPartition := make([]int, 0)
 	n := len(*m)
-	co := make(matrix, n)
+	partition := make(matrix, n)
 
 	for i := 0; i < n; i++ {
-		co[i] = []int{i}
+		partition[i] = []int{i}
 	}
 
 	for ph := 1; ph < n; ph++ {
@@ -98,21 +99,21 @@ func (m *matrix) globalMinCut() (int, []int) {
 		for it := 0; it < n-ph; it++ {
 			w[t] = math.MinInt
 			s, t = t, max_element(w)
-			for i := 0; i < n; i++ {
-				w[i] += (*m)[t][i]
+			for i, col := range (*m)[t] {
+				w[i] += col
 			}
 		}
 		if w[t]-(*m)[t][t] < bestCut {
 			bestCut = w[t] - (*m)[t][t]
-			bestPartition = co[t]
+			bestPartition = partition[t]
 		}
 
-		co[s] = append(co[s], co[t]...)
-		for i := 0; i < n; i++ {
-			(*m)[s][i] += (*m)[t][i]
+		partition[s] = append(partition[s], partition[t]...)
+		for i, col := range (*m)[t] {
+			(*m)[s][i] += col
 		}
-		for i := 0; i < n; i++ {
-			(*m)[i][s] = (*m)[s][i]
+		for i, col := range (*m)[s] {
+			(*m)[i][s] = col
 		}
 		(*m)[0][t] = math.MinInt
 	}
