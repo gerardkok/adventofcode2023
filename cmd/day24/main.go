@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -30,11 +31,14 @@ const (
 	z
 )
 
-var projectionMap = map[plane][2]plane{
-	x: {y, z},
-	y: {x, z},
-	z: {x, y},
-}
+var (
+	projectionMap = map[plane][2]plane{
+		x: {y, z},
+		y: {x, z},
+		z: {x, y},
+	}
+	errNoIntersect = errors.New("hailstones don't intersect")
+)
 
 func NewDay24(inputFile string, lower, upper float64) Day24 {
 	return Day24{day.DayInput(inputFile), lower, upper}
@@ -96,12 +100,12 @@ func (h hailstone) timeAtPosition(pos float64, p plane) float64 {
 	return (pos - float64(h.position[p])) / float64(h.velocity[p])
 }
 
-func (h hailstone) inPast(xIntersect float64, p plane) bool {
+func (h hailstone) inPast(x float64, p plane) bool {
 	ax1 := projectionMap[p][0]
-	return h.timeAtPosition(xIntersect, ax1) < 0
+	return h.timeAtPosition(x, ax1) < 0
 }
 
-func intersection(a, b hailstone, p plane) (float64, float64) {
+func (p plane) intersect(a, b hailstone) (float64, float64) {
 	fa := a.projection(p)
 	fb := b.projection(p)
 
@@ -109,18 +113,37 @@ func intersection(a, b hailstone, p plane) (float64, float64) {
 		return -1, -1
 	}
 
-	// a and b intersect at xIntersect, yIntersect
+	// a and b intersect at x, y
 	d := d(fa, fb)
 	factorA := float64(fa.c) / float64(d)
 	factorB := float64(fb.c) / float64(d)
-	xIntersect := float64(fb.b)*factorA - float64(fa.b)*factorB
-	yIntersect := float64(fa.a)*factorB - float64(fb.a)*factorA
+	x := float64(fb.b)*factorA - float64(fa.b)*factorB
+	y := float64(fa.a)*factorB - float64(fb.a)*factorA
 
-	if a.inPast(xIntersect, p) || b.inPast(xIntersect, p) {
+	if a.inPast(x, p) || b.inPast(x, p) {
 		return -1, -1
 	}
 
-	return xIntersect, yIntersect
+	return x, y
+}
+
+func (p plane) project(c map[plane]int) map[plane]int {
+	return map[plane]int{
+		projectionMap[p][0]: c[projectionMap[p][0]],
+		projectionMap[p][1]: c[projectionMap[p][1]],
+	}
+}
+
+func (p plane) intIntersect(a, b hailstone) (map[plane]int, error) {
+	x, y := p.intersect(a, b)
+	if x == -1 && y == -1 {
+		return nil, errNoIntersect
+	}
+	result := map[plane]int{
+		projectionMap[p][0]: int(x),
+		projectionMap[p][1]: int(y),
+	}
+	return p.project(result), nil
 }
 
 func (h hailstone) String() string {
@@ -131,7 +154,7 @@ func countIntersections(hailstones []hailstone, lower, upper float64) int {
 	result := 0
 	for i := range hailstones {
 		for j := i + 1; j < len(hailstones); j++ {
-			x, y := intersection(hailstones[i], hailstones[j], z)
+			x, y := z.intersect(hailstones[i], hailstones[j])
 			if x >= lower && x <= upper && y >= lower && y <= upper {
 				result++
 			}
@@ -140,42 +163,36 @@ func countIntersections(hailstones []hailstone, lower, upper float64) int {
 	return result
 }
 
-func intersectingVelocities(rvx, rvy int, p plane, hailstones []hailstone) (hailstone, bool) {
-	type coord struct {
-		x, y int
-	}
-	ax1 := projectionMap[p][0]
-	ax2 := projectionMap[p][1]
-	intersectionMap := make(map[coord]int)
+func add(a, b map[plane]int) map[plane]int {
+	return map[plane]int{x: a[x] + b[x], y: a[y] + b[y], z: a[z] + b[z]}
+}
+
+func invert(c map[plane]int) map[plane]int {
+	return map[plane]int{x: -c[x], y: -c[y], z: -c[z]}
+}
+
+func unroll(c map[plane]int) [3]int {
+	return [3]int{c[x], c[y], c[z]}
+}
+
+func (p plane) intersectingVelocities(rv map[plane]int, hailstones []hailstone) (hailstone, bool) {
+	intersectionMap := make(map[[3]int]int)
 	for i, a := range hailstones {
-		relVelocityA := map[plane]int{
-			p:   a.velocity[p],
-			ax1: a.velocity[ax1] + rvx,
-			ax2: a.velocity[ax2] + rvy,
-		}
+		relVelocityA := add(a.velocity, rv)
 		relA := hailstone{a.position, relVelocityA}
 		for j := i + 1; j < len(hailstones); j++ {
 			b := hailstones[j]
-			relVelocityB := map[plane]int{
-				p:   b.velocity[p],
-				ax1: b.velocity[ax1] + rvx,
-				ax2: b.velocity[ax2] + rvy,
-			}
+			relVelocityB := add(b.velocity, rv)
 			relB := hailstone{b.position, relVelocityB}
-			x, y := intersection(relA, relB, p)
-			if x == -1 && y == -1 {
+			intersection, err := p.intIntersect(relA, relB)
+			if err != nil {
 				continue
 			}
-			intersectionMap[coord{int(x), int(y)}]++
-			if intersectionMap[coord{int(x), int(y)}] > 5 {
-				hPosition := map[plane]int{
-					ax1: int(x),
-					ax2: int(y),
-				}
-				hVelocity := map[plane]int{
-					ax1: -rvx,
-					ax2: -rvy,
-				}
+			xy := unroll(intersection)
+			intersectionMap[xy]++
+			if intersectionMap[xy] > 5 {
+				hPosition := p.project(intersection)
+				hVelocity := invert(rv)
 				return hailstone{hPosition, hVelocity}, true
 			} else if len(intersectionMap) > 5 {
 				return hailstone{}, false
@@ -185,11 +202,16 @@ func intersectingVelocities(rvx, rvy int, p plane, hailstones []hailstone) (hail
 	return hailstone{}, false
 }
 
-func findRockProjection(hailstones []hailstone, p plane) hailstone {
+func (p plane) findRockProjection(hailstones []hailstone) hailstone {
+	ax1 := projectionMap[p][0]
+	ax2 := projectionMap[p][1]
 	for rvx := -400; rvx < 400; rvx++ {
 		for rvy := -400; rvy < 400; rvy++ {
-			result, found := intersectingVelocities(rvx, rvy, p, hailstones)
-			if found {
+			rv := map[plane]int{
+				ax1: rvx,
+				ax2: rvy,
+			}
+			if result, found := p.intersectingVelocities(rv, hailstones); found {
 				return result
 			}
 		}
@@ -198,8 +220,8 @@ func findRockProjection(hailstones []hailstone, p plane) hailstone {
 }
 
 func findRock(hailstones []hailstone) hailstone {
-	result := findRockProjection(hailstones, z)
-	h := findRockProjection(hailstones, x)
+	result := z.findRockProjection(hailstones)
+	h := x.findRockProjection(hailstones)
 	result.position[z] = h.position[z]
 	result.velocity[z] = h.velocity[z]
 	return result
