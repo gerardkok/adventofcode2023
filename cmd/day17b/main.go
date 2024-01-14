@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"path/filepath"
 
@@ -17,7 +16,7 @@ func NewDay17b(inputFile string) Day17b {
 	return Day17b{day.DayInput(inputFile)}
 }
 
-type direction int
+type direction bool
 
 type heatMap [][]int
 
@@ -27,24 +26,19 @@ type state struct {
 }
 
 const (
-	north direction = iota
-	east
-	south
-	west
+	vertical   = direction(true)
+	horizontal = direction(false)
+
+	maxCostPerStep = 9
 )
 
-type turn struct {
-	dRow, dColumn int
-	nextEntrance  direction
-}
+type turn [2]int
 
 var (
-	directions = []direction{north, east, south, west}
+	directions = []direction{vertical, horizontal}
 	turnMap    = map[direction][]turn{
-		north: {{0, -1, east}, {0, 1, west}},
-		east:  {{-1, 0, south}, {1, 0, north}},
-		south: {{0, 1, west}, {0, -1, east}},
-		west:  {{1, 0, north}, {-1, 0, south}},
+		vertical:   {{0, -1}, {0, 1}},
+		horizontal: {{-1, 0}, {1, 0}},
 	}
 )
 
@@ -71,22 +65,20 @@ func (q *queue) enqueue(s state, heuristic, cost int) {
 	(*q)[i] = append((*q)[i], node{s, cost})
 }
 
-func (network network) aStar(endRow, endColumn, buckets int) int {
+func (network network) aStar(endRow, endColumn, maxSteps int) int {
+	buckets := maxSteps*(maxCostPerStep+1) + 1
 	q := make(queue, buckets)
-	q.enqueue(state{0, 0, north}, endRow+endColumn, 0)
-	q.enqueue(state{0, 0, west}, endRow+endColumn, 0)
+	q.enqueue(state{0, 0, vertical}, endRow+endColumn, 0)
+	q.enqueue(state{0, 0, horizontal}, endRow+endColumn, 0)
 	v := make(visited)
-	count := 0
 
 	for index := (endRow + endColumn) % len(q); ; index = (index + 1) % len(q) {
 		for len(q[index]) > 0 {
 			n := q[index][0]
-			count++
 			q[index] = q[index][1:]
 			s, cost := n.state, n.cost
 
 			if s.row == endRow && s.column == endColumn {
-				fmt.Printf("count: %d\n", count)
 				return cost
 			}
 
@@ -107,7 +99,7 @@ func (network network) aStar(endRow, endColumn, buckets int) int {
 func (h heatMap) cumulativeCost(row, column, steps int, t turn) int {
 	cost := 0
 	for i := 1; i <= steps; i++ {
-		cost += h[row+t.dRow*i][column+t.dColumn*i]
+		cost += h[row+t[0]*i][column+t[1]*i]
 	}
 	return cost
 }
@@ -121,13 +113,13 @@ func (h heatMap) edges(start state, minSteps, maxSteps int) []node {
 
 	for _, turn := range turnMap[start.entrance] {
 		for s := minSteps; s <= maxSteps; s++ {
-			r, c := start.row+turn.dRow*s, start.column+turn.dColumn*s
+			r, c := start.row+turn[0]*s, start.column+turn[1]*s
 			if h.outside(r, c) {
 				// next step will also be outside map, so no need to 'continue'
 				break
 			}
 
-			end := state{r, c, turn.nextEntrance}
+			end := state{r, c, !start.entrance}
 
 			cost := h.cumulativeCost(start.row, start.column, s, turn)
 			result = append(result, node{end, cost})
@@ -164,15 +156,19 @@ func makeHeatMap(lines []string) heatMap {
 func (d Day17b) Part1() int {
 	lines, _ := d.ReadLines()
 	heatMap := makeHeatMap(lines)
-	network := heatMap.makeNetwork(1, 3)
-	return network.aStar(len(heatMap)-1, len(heatMap[0])-1, 3*(9+1)+1)
+	minSteps := 1
+	maxSteps := 3
+	network := heatMap.makeNetwork(minSteps, maxSteps)
+	return network.aStar(len(heatMap)-1, len(heatMap[0])-1, maxSteps)
 }
 
 func (d Day17b) Part2() int {
 	lines, _ := d.ReadLines()
 	heatMap := makeHeatMap(lines)
-	network := heatMap.makeNetwork(4, 10)
-	return network.aStar(len(heatMap)-1, len(heatMap[0])-1, 10*(9+1)+1)
+	minSteps := 4
+	maxSteps := 10
+	network := heatMap.makeNetwork(minSteps, maxSteps)
+	return network.aStar(len(heatMap)-1, len(heatMap[0])-1, maxSteps)
 }
 
 func main() {
