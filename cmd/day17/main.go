@@ -103,8 +103,9 @@ func (h heatMap) edges(start state, minSteps, maxSteps int) []node {
 
 	for _, turn := range turnMap[start.entrance] {
 		cost := 0
+		r, c := start.row, start.column
 		for s := 1; s <= maxSteps; s++ {
-			r, c := start.row+turn[0]*s, start.column+turn[1]*s
+			r, c = r+turn[0], c+turn[1]
 			if h.outside(r, c) {
 				// next step will also be outside map, so no need to 'continue'
 				break
