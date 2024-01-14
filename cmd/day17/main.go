@@ -74,9 +74,8 @@ func (network network) dijkstra(endRow, endColumn, maxSteps int) int {
 
 	for index := 0; ; index = (index + 1) % len(q) {
 		for len(q[index]) > 0 {
-			n := q[index][0]
+			s, cost := q[index][0].state, q[index][0].cost
 			q[index] = q[index][1:]
-			s, cost := n.state, n.cost
 
 			if s.row == endRow && s.column == endColumn {
 				return cost
@@ -95,14 +94,6 @@ func (network network) dijkstra(endRow, endColumn, maxSteps int) int {
 	}
 }
 
-func (h heatMap) cumulativeCost(row, column, steps int, t turn) int {
-	cost := 0
-	for i := 1; i <= steps; i++ {
-		cost += h[row+t[0]*i][column+t[1]*i]
-	}
-	return cost
-}
-
 func (h heatMap) outside(row, column int) bool {
 	return row < 0 || row > len(h)-1 || column < 0 || column > len(h[0])-1
 }
@@ -111,16 +102,22 @@ func (h heatMap) edges(start state, minSteps, maxSteps int) []node {
 	var result []node
 
 	for _, turn := range turnMap[start.entrance] {
-		for s := minSteps; s <= maxSteps; s++ {
+		cost := 0
+		for s := 1; s <= maxSteps; s++ {
 			r, c := start.row+turn[0]*s, start.column+turn[1]*s
 			if h.outside(r, c) {
 				// next step will also be outside map, so no need to 'continue'
 				break
 			}
 
+			cost += h[r][c]
+
+			if s < minSteps {
+				continue
+			}
+
 			end := state{r, c, !start.entrance}
 
-			cost := h.cumulativeCost(start.row, start.column, s, turn)
 			result = append(result, node{end, cost})
 		}
 	}
