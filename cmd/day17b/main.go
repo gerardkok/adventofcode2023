@@ -9,12 +9,12 @@ import (
 	"adventofcode23/internal/projectpath"
 )
 
-type Day17 struct {
+type Day17b struct {
 	day.DayInput
 }
 
-func NewDay17(inputFile string) Day17 {
-	return Day17{day.DayInput(inputFile)}
+func NewDay17b(inputFile string) Day17b {
+	return Day17b{day.DayInput(inputFile)}
 }
 
 type direction int
@@ -66,24 +66,24 @@ func (v visited) get(s state) int {
 	return math.MaxInt
 }
 
-func (q *queue) enqueue(s state, cost int) {
-	i := cost % len(*q)
+func (q *queue) enqueue(s state, heuristic, cost int) {
+	i := (heuristic + cost) % len(*q)
 	(*q)[i] = append((*q)[i], node{s, cost})
 }
 
-func (network network) dijkstra(endRow, endColumn, buckets int) int {
+func (network network) aStar(endRow, endColumn, buckets int) int {
 	q := make(queue, buckets)
-	q.enqueue(state{0, 0, north}, 0)
-	q.enqueue(state{0, 0, west}, 0)
+	q.enqueue(state{0, 0, north}, endRow+endColumn, 0)
+	q.enqueue(state{0, 0, west}, endRow+endColumn, 0)
 	v := make(visited)
 	count := 0
 
-	for index := 0; ; index = (index + 1) % len(q) {
+	for index := (endRow + endColumn) % len(q); ; index = (index + 1) % len(q) {
 		for len(q[index]) > 0 {
 			n := q[index][0]
+			count++
 			q[index] = q[index][1:]
 			s, cost := n.state, n.cost
-			count++
 
 			if s.row == endRow && s.column == endColumn {
 				fmt.Printf("count: %d\n", count)
@@ -97,7 +97,8 @@ func (network network) dijkstra(endRow, endColumn, buckets int) int {
 			v[s] = cost
 
 			for _, newNode := range network[s] {
-				q.enqueue(newNode.state, cost+newNode.cost)
+				heuristic := endRow - newNode.state.row + endColumn - newNode.state.column
+				q.enqueue(newNode.state, heuristic, cost+newNode.cost)
 			}
 		}
 	}
@@ -160,22 +161,22 @@ func makeHeatMap(lines []string) heatMap {
 	return result
 }
 
-func (d Day17) Part1() int {
+func (d Day17b) Part1() int {
 	lines, _ := d.ReadLines()
 	heatMap := makeHeatMap(lines)
 	network := heatMap.makeNetwork(1, 3)
-	return network.dijkstra(len(heatMap)-1, len(heatMap[0])-1, 3*9+1)
+	return network.aStar(len(heatMap)-1, len(heatMap[0])-1, 3*(9+1)+1)
 }
 
-func (d Day17) Part2() int {
+func (d Day17b) Part2() int {
 	lines, _ := d.ReadLines()
 	heatMap := makeHeatMap(lines)
 	network := heatMap.makeNetwork(4, 10)
-	return network.dijkstra(len(heatMap)-1, len(heatMap[0])-1, 10*9+1)
+	return network.aStar(len(heatMap)-1, len(heatMap[0])-1, 10*(9+1)+1)
 }
 
 func main() {
-	d := NewDay17(filepath.Join(projectpath.Root, "cmd", "day17", "input.txt"))
+	d := NewDay17b(filepath.Join(projectpath.Root, "cmd", "day17", "input.txt"))
 
 	day.Solve(d)
 }
