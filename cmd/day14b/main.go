@@ -25,9 +25,8 @@ func NewDay14b(inputFile string) Day14b {
 func (p *platform) tiltNorth() {
 	north := make([]int, p.nColumns)
 
-	for r := 0; r < p.nRows; r++ {
-		for c := 0; c < p.nColumns; c++ {
-			i := r*p.nColumns + c
+	for r, i := 0, 0; r < p.nRows; r++ {
+		for c := 0; c < p.nColumns; c, i = c+1, i+1 {
 			switch p.spots[i] {
 			case 'O':
 				j := north[c]*p.nColumns + c
@@ -43,9 +42,8 @@ func (p *platform) tiltNorth() {
 func (p *platform) tiltWest() {
 	west := make([]int, p.nRows)
 
-	for c := 0; c < p.nColumns; c++ {
-		for r := 0; r < p.nRows; r++ {
-			i := r*p.nColumns + c
+	for r, i := 0, 0; r < p.nRows; r++ {
+		for c := 0; c < p.nColumns; c, i = c+1, i+1 {
 			switch p.spots[i] {
 			case 'O':
 				j := r*p.nColumns + west[r]
@@ -64,9 +62,8 @@ func (p *platform) tiltSouth() {
 		south[i] = p.nRows - 1
 	}
 
-	for r := p.nRows - 1; r >= 0; r-- {
-		for c := 0; c < p.nColumns; c++ {
-			i := r*p.nColumns + c
+	for r, i := p.nRows-1, p.nRows*p.nColumns-1; r >= 0; r-- {
+		for c := p.nColumns - 1; c >= 0; c, i = c-1, i-1 {
 			switch p.spots[i] {
 			case 'O':
 				j := south[c]*p.nColumns + c
@@ -85,9 +82,8 @@ func (p *platform) tiltEast() {
 		east[i] = p.nColumns - 1
 	}
 
-	for c := p.nColumns - 1; c >= 0; c-- {
-		for r := 0; r < p.nRows; r++ {
-			i := r*p.nColumns + c
+	for r, i := p.nRows-1, p.nRows*p.nColumns-1; r >= 0; r-- {
+		for c := p.nColumns - 1; c >= 0; c, i = c-1, i-1 {
 			switch p.spots[i] {
 			case 'O':
 				j := r*p.nColumns + east[r]
@@ -157,7 +153,7 @@ func (d Day14b) Part2() int {
 
 	s, e := p.detectLoop()
 
-	last := (1000000000 - s) % len(e)
+	last := (1_000_000_000 - s) % len(e)
 
 	return e[last]
 }
