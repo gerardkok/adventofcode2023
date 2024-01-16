@@ -23,83 +23,70 @@ func NewDay14b(inputFile string) Day14b {
 }
 
 func (p *platform) tiltNorth() {
-	north := make([]int, p.nColumns)
-
-	i := 0
-	for r := 0; r < p.nRows; r++ {
-		for c := 0; c < p.nColumns; c++ {
+	for c := 0; c < p.nColumns; c++ {
+		north := 0
+		for r := 0; r < p.nRows; r++ {
+			i := r*p.nColumns + c
 			switch p.spots[i] {
 			case 'O':
-				j := north[c]*p.nColumns + c
+				j := north*p.nColumns + c
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
-				north[c]++
+				north++
 			case '#':
-				north[c] = r + 1
+				north = r + 1
 			}
-			i++
 		}
 	}
 }
 
 func (p *platform) tiltWest() {
-	west := make([]int, p.nRows)
-
-	i := 0
 	for r := 0; r < p.nRows; r++ {
+		west := 0
 		for c := 0; c < p.nColumns; c++ {
+			i := r*p.nColumns + c
 			switch p.spots[i] {
 			case 'O':
-				j := r*p.nColumns + west[r]
+				j := r*p.nColumns + west
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
-				west[r]++
+				west++
 			case '#':
-				west[r] = c + 1
+				west = c + 1
 			}
-			i++
 		}
 	}
 }
 
 func (p *platform) tiltSouth() {
-	south := make([]int, p.nColumns)
-	for i := range south {
-		south[i] = p.nRows - 1
-	}
 
-	i := len(p.spots) - 1
-	for r := p.nRows - 1; r >= 0; r-- {
-		for c := p.nColumns - 1; c >= 0; c-- {
+	for c := p.nColumns - 1; c >= 0; c-- {
+		south := p.nRows - 1
+		for r := p.nRows - 1; r >= 0; r-- {
+			i := r*p.nColumns + c
 			switch p.spots[i] {
 			case 'O':
-				j := south[c]*p.nColumns + c
+				j := south*p.nColumns + c
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
-				south[c]--
+				south--
 			case '#':
-				south[c] = r - 1
+				south = r - 1
 			}
-			i--
 		}
 	}
 }
 
 func (p *platform) tiltEast() {
-	east := make([]int, p.nRows)
-	for i := range east {
-		east[i] = p.nColumns - 1
-	}
-
-	i := len(p.spots) - 1
 	for r := p.nRows - 1; r >= 0; r-- {
+		east := p.nColumns - 1
 		for c := p.nColumns - 1; c >= 0; c-- {
+			i := r*p.nColumns + c
 			switch p.spots[i] {
 			case 'O':
-				j := r*p.nColumns + east[r]
+				j := r*p.nColumns + east
 				p.spots[i], p.spots[j] = p.spots[j], p.spots[i]
-				east[r]--
+				east--
 			case '#':
-				east[r] = c - 1
+				east = c - 1
 			}
-			i--
 		}
 	}
 }
@@ -115,10 +102,9 @@ func (d Day14b) Part1() int {
 
 func (p platform) load() int {
 	result := 0
-	for r := 0; r < p.nRows; r++ {
-		l := p.nRows - r
-		for c := r * p.nColumns; c < (r+1)*p.nColumns; c++ {
-			if p.spots[c] == 'O' {
+	for r, l := 0, p.nRows; r < p.nRows*p.nColumns; r, l = r+p.nColumns, l-1 {
+		for _, spot := range p.spots[r : r+p.nColumns] {
+			if spot == 'O' {
 				result += l
 			}
 		}
