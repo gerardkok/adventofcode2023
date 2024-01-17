@@ -57,7 +57,6 @@ func (p *platform) tiltWest() {
 }
 
 func (p *platform) tiltSouth() {
-
 	for c := p.nColumns - 1; c >= 0; c-- {
 		south := p.nRows - 1
 		for r := p.nRows - 1; r >= 0; r-- {
